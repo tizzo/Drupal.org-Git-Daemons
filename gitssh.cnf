@@ -1,0 +1,14 @@
+[daemon]
+; Set the location of the private key to be used
+; in this 
+privateKeyLocation=/tmp/test_host_key
+; Set the port this server should run on.
+port=2222
+; Git repository path
+reposiotryPath=/git
+
+[remote-auth-server]
+; Likely the path to your Drupal site.
+url='localhost'
+; TODO: update this once we actually have this service living in the right module
+path='/git'
