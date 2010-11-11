@@ -81,7 +81,6 @@ class GitSession(object):
         fingerprint = Key.fromString(self.user.meta.credentials.blob, 'BLOB').fingerprint()
         params = urllib.urlencode({'fingerprint' : fingerprint})
         response = urllib.urlopen(url + '/' + path + '?%s' % params)
-        #response = urllib.urlopen(url + '/' + path, params)
         result = response.readline()
         repos = json.loads(result)
         projectName = reponame[1:-4] 
@@ -123,10 +122,6 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
         self.meta = meta
 
     def checkKey(self, credentials):
-        
-        f = open('sample.txt', 'a')
-        f.write(credentials.blob)
-        f.close()
         self.meta.credentials = credentials
         if (credentials.username != 'git'):
             return False
