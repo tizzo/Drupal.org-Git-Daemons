@@ -16,6 +16,6 @@ path=project-git-auth
 
 [beanstalkd-git-repo-manager-daemon]
 repoisotryPath=/git
-; The machine 
+; The location of your beanstalkd
 url=127.0.0.1
 port=11300
