@@ -32,7 +32,7 @@ class IGitMetadata(interface.Interface):
         the file system.
         '''
 
-class BallinMockMeta(object):
+class DrupalMockMeta(object):
 
     def repopath(self, username, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
@@ -128,7 +128,7 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
         return True
         
 class GitServer(SSHFactory):
-    authmeta = BallinMockMeta()
+    authmeta = DrupalMockMeta()
     portal = Portal(GitRealm(authmeta))
     portal.registerChecker(GitPubKeyChecker(authmeta))
 
