@@ -9,9 +9,10 @@ reposiotryPath=/git
 
 [remote-auth-server]
 ; Likely the path to your Drupal site.
+; This may include a port number.
 url=http://syssettings.local
-; TODO: update this once we actually have this service living in the right module
-path=vcs-git-auth
+; This shouldn't change unless you have done somethign funky.
+path=project-git-auth
 
 [beanstalkd-git-repo-manager-daemon]
 repoisotryPath=/git
