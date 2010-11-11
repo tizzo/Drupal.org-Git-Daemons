@@ -27,7 +27,7 @@ Beanstalk can easily be built from source.  Once you have [beanstalkd](http://kr
 
 ### Starting the repo manager
 
-Once you have beanstalk started `beanstalkdRepositoryManager.py`
+Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from inside this repository.
 
 ###Install the [Project Git Auth](https://github.com/tizzo/Project-Git-Auth) module
 
@@ -51,4 +51,4 @@ Configure the daemon in the drupaldaemons.cnf to properly point to a local direc
 
 #### Starting the daemon
 
-Start the daemon by typing `./drupalGitSSHDaemon.py`
+From inside this repository, Start the daemon by typing `./drupalGitSSHDaemon.py`
