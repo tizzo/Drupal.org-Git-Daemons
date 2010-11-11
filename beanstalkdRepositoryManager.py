@@ -16,7 +16,7 @@ job = False
 if __name__ == '__main__':
   config = ConfigParser.SafeConfigParser()
   config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-  repositoryPath = config.get('beanstalkd-git-repo-manager-daemon', 'repoisotryPath')
+  repositoryPath = config.get('beanstalkd-git-repo-manager-daemon', 'repositoryPath')
   url = config.get('beanstalkd-git-repo-manager-daemon', 'url')
   port = config.getint('beanstalkd-git-repo-manager-daemon', 'port')
   beanstalk = beanstalkc.Connection(host=url, port=port)
