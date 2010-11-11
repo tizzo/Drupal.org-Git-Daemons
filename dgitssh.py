@@ -18,6 +18,8 @@ from zope import interface
 
 import ConfigParser
 import urllib
+import base64
+import json
 
 log.startLogging(sys.stderr)
 
@@ -31,15 +33,15 @@ class IGitMetadata(interface.Interface):
         '''
 
 class BallinMockMeta(object):
-    'Mock persistence layer.'
 
     def repopath(self, username, reponame):
-        'Note, this is where we could do further mapping into a subdirectory
-        for a user or issue\'s specific sandbox'
+        '''Note, this is where we could do further mapping into a subdirectory
+        for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
         path = config.get('daemon', 'reposiotryPath')
         path = path + reponame
+        project = '';
         'Check to see that the folder exists'
         if not os.path.exists(path):
           return None
@@ -72,6 +74,18 @@ class GitSession(object):
         repopath = self.user.meta.repopath(self.user.username, reponame)
         if repopath is None:
             raise ConchError('Invalid repository.')
+
+        'Build the request to run against drupal'
+        url = config.get('remote-auth-server', 'url')
+        path = config.get('remote-auth-server', 'path')
+        # TODO: Just figure out how to get urls properly escaped!
+        params = urllib.urlencode({'public_key' : self.user.meta.credentials.blob})
+        response = urllib.urlopen(url + '/' + path + '?%s' % params)
+        result = response.readline()
+        repos = json.loads(result)
+        projectName = reponame[1:-4] 
+        if projectName not in repos:
+          raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
         command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
         reactor.spawnProcess(proto, sh,(sh, '-c', command))
 
@@ -108,19 +122,12 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
         self.meta = meta
 
     def checkKey(self, credentials):
+        print credentials.blob
+        self.meta.credentials = credentials
         if (credentials.username != 'git'):
             return False
-        'Build the request to run against drupal'
-#TODO: TEST THIS SHIT!
-        url = config.get('remote-auth-server', 'url')
-        path = config.get('remote-auth-server', 'url' )
-        ' TODO: get the actual project name from somewhere '
-        params = urllib.urlencode({'project': 'whatev', 'key' : credentials.blob})
-        result = urllib.urlopen(url + '/' + path + '?' % params).readline()
-        if (result == 'write'):
-            return True
-        return False
-
+        return True
+        
 class GitServer(SSHFactory):
     authmeta = BallinMockMeta()
     portal = Portal(GitRealm(authmeta))
@@ -135,7 +142,7 @@ class GitServer(SSHFactory):
 if __name__ == '__main__':
     # Load our configurations
     config = ConfigParser.SafeConfigParser()
-    config.readfp(open(sys.path[0] + '/gitssh.cnf'))
+    config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
     port = config.getint('daemon', 'port')
     key = config.get('daemon', 'privateKeyLocation')
     components.registerAdapter(GitSession, GitConchUser, ISession)
