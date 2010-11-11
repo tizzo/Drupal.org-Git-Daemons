@@ -34,7 +34,7 @@ Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from insi
 ## Drupal Git SSH Daemon
 
 ### Requirements:
-- [twisted 10.1.0](http://twistedmatrix.com/trac/wiki/Downloads)
+- [Twisted 10.1.0](http://twistedmatrix.com/trac/wiki/Downloads)
 - [Project Git Auth](https://github.com/tizzo/Project-Git-Auth)
 
 ### Installing Twisted
