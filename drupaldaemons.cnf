@@ -11,7 +11,7 @@ reposiotryPath=/git
 ; Likely the path to your Drupal site.
 ; This may include a port number.
 url=http://localhost
-; This shouldn't change unless you have done somethign funky.
+; This shouldn't change unless you have done something funky.
 path=project-git-auth
 
 [beanstalkd-git-repo-manager-daemon]
