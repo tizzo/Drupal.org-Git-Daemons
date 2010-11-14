@@ -20,6 +20,7 @@ Beanstalk can easily be built from source.  Once you have [beanstalkd](http://kr
 #### Install beanstalkc
 
 - Ensure that you have easy_install installed (on debian/ubuntu `apt-get install python-dev  python-setuptools`).
+- Install beanstalkc's YAML dependency: `easy_install PyYAML`.
 - Run `git clone https://github.com/earl/beanstalkc.git`
 - Move into the beanstalkc directory `cd beanstalkc`
 - Run the installer `python setup.py install`
