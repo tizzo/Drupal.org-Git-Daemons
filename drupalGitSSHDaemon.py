@@ -9,6 +9,7 @@ from twisted.conch.ssh import common
 from twisted.conch.ssh.session import ISession, SSHSession
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
+from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor, defer
 from twisted.python import components, log
@@ -18,6 +19,7 @@ import ConfigParser
 import urllib
 import base64
 import json
+import hashlib
 
 log.startLogging(sys.stderr)
 
@@ -135,6 +137,19 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
             return False
         return True
         
+class GitPasswordChecker(object):
+    credentialInterfaces = IUsernamePassword,
+    interface.implements(ICredentialsChecker)
+    def __init__(self, meta):
+        self.meta = meta
+
+    def requestAvatarId(self, credentials):
+        for k in self.meta.passwords(credentials.username):
+            md5_password = hashlib.md5(credentials.password).hexdigest()
+            if k == md5_password:
+                return defer.succeed(credentials.username)
+        return defer.fail(UnauthorizedLogin("invalid password"))
+
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
     portal = Portal(GitRealm(authmeta))
