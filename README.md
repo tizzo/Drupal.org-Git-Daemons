@@ -20,6 +20,7 @@ Beanstalk can easily be built from source.  Once you have [beanstalkd](http://kr
 #### Install beanstalkc
 
 - Ensure that you have easy_install installed (on debian/ubuntu `apt-get install python-dev  python-setuptools`).
+- Install beanstalkc's YAML dependency: `easy_install PyYAML`.
 - Run `git clone https://github.com/earl/beanstalkc.git`
 - Move into the beanstalkc directory `cd beanstalkc`
 - Run the installer `python setup.py install`
@@ -40,6 +41,8 @@ Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from insi
 ### Installing Twisted
 
 - Ensure that you have easy_install installed (on debian/ubuntu `apt-get install python-dev  python-setuptools`).
+- On Ubuntu, `apt-get install python-twisted`
+- Install zope
 - Download Twisted 10.1.0 `wget http://tmrc.mit.edu/mirror/twisted/Twisted/10.1/Twisted-10.1.0.tar.bz2`
 - Untar Twisted `tar -xvf Twisted-10.1.0.tar.bz2`
 - Move into the Twisted directory `cd Twisted-10.1.0`

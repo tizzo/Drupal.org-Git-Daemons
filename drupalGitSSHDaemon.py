@@ -39,7 +39,7 @@ class DrupalMockMeta(object):
         for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
-        path = config.get('daemon', 'reposiotryPath')
+        path = config.get('drupalSSHGitServer', 'reposiotryPath')
         path = path + reponame
         project = '';
         'Check to see that the folder exists'
@@ -75,17 +75,18 @@ class GitSession(object):
         if repopath is None:
             raise ConchError('Invalid repository.')
 
-        'Build the request to run against drupal'
-        url = config.get('remote-auth-server', 'url')
-        path = config.get('remote-auth-server', 'path')
-        fingerprint = Key.fromString(self.user.meta.credentials.blob, 'BLOB').fingerprint()
-        params = urllib.urlencode({'fingerprint' : fingerprint})
-        response = urllib.urlopen(url + '/' + path + '?%s' % params)
-        result = response.readline()
-        repos = json.loads(result)
-        projectName = reponame[1:-4] 
-        if projectName not in repos:
-          raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
+	if ('git-upload-pack' not in argv[:-1]):
+            'Build the request to run against drupal'
+            url = config.get('remote-auth-server', 'url')
+            path = config.get('remote-auth-server', 'path')
+            fingerprint = Key.fromString(self.user.meta.credentials.blob, 'BLOB').fingerprint()
+            params = urllib.urlencode({'fingerprint' : fingerprint})
+            response = urllib.urlopen(url + '/' + path + '?%s' % params)
+            result = response.readline()
+            repos = json.loads(result)
+            projectName = reponame[1:-4] 
+            if projectName not in repos:
+                raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
         command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
         reactor.spawnProcess(proto, sh,(sh, '-c', command))
 
@@ -142,8 +143,9 @@ if __name__ == '__main__':
     # Load our configurations
     config = ConfigParser.SafeConfigParser()
     config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-    port = config.getint('daemon', 'port')
-    key = config.get('daemon', 'privateKeyLocation')
+    port = config.getint('drupalSSHGitServer', 'port')
+    key = config.get('drupalSSHGitServer', 'privateKeyLocation')
+    anonymousReadAccess = config.get('drupalSSHGitServer', 'anonymousReadAccess')
     components.registerAdapter(GitSession, GitConchUser, ISession)
     reactor.listenTCP(port, GitServer(key))
     reactor.run()
