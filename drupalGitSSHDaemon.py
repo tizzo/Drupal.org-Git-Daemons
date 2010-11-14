@@ -30,7 +30,17 @@ class IGitMetadata(interface.Interface):
         the file system.
         '''
 
-class BallinMockMeta(object):
+    def pubkeys(self, username):
+        '''
+        Return the list of valid public keys for a user.
+        '''
+
+    def passwords(self, username):
+        '''
+        Return the list of valid password hashes for a user.
+        '''
+
+class DrupalMeta(object):
 
     def repopath(self, username, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
@@ -126,7 +136,7 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
         return True
         
 class GitServer(SSHFactory):
-    authmeta = BallinMockMeta()
+    authmeta = DrupalMeta()
     portal = Portal(GitRealm(authmeta))
     portal.registerChecker(GitPubKeyChecker(authmeta))
 
