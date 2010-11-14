@@ -6,13 +6,11 @@ from twisted.conch.avatar import ConchUser
 from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.error import ConchError
 from twisted.conch.ssh import common
-from twisted.conch.ssh.session import (ISession,
-                                       SSHSession,
-                                       SSHSessionProcessProtocol)
+from twisted.conch.ssh.session import ISession, SSHSession
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.cred.portal import IRealm, Portal
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python import components, log
 from zope import interface
 
