@@ -1,8 +1,8 @@
 # Drupal.org Git Daemons
 
-This project is a proof of concept and intellectual excercise to demonstrate the use of SSH daemons and beanstalkd to maintain git reposiotries mapped to project module projects.
+This project is a proof of concept and intellectual excercise to demonstrate the use of SSH daemons and beanstalkd to maintain git repositories mapped to project module projects.
 
-## BeanstalkD Reposiotry Manager
+## BeanstalkD Repository Manager
 
 ### Requirements:
 - [Beanstalkd](http://kr.github.com/beanstalkd/)
