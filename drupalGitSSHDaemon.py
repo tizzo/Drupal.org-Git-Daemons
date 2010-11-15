@@ -59,11 +59,18 @@ class DrupalMeta(object):
 
         'Build the path to the repository'
         path = config.get('daemon', 'repositoryPath')
-        path = path + reponame
+        path = path + reponame + ".git"
         project = '';
         'Check to see that the folder exists'
+        log.msg(path)
         if not os.path.exists(path):
           return None
+
+        projectName = reponame[1:] 
+        repos = self.request(username)["repos"]
+        if projectName not in repos:
+          raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
+
         return path
 
     def pubkeys(self, username):
@@ -99,9 +106,6 @@ class GitSession(object):
         if repopath is None:
             raise ConchError('Invalid repository.')
 
-        projectName = reponame[1:-4] 
-        if projectName not in repos:
-          raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
         command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
         reactor.spawnProcess(proto, sh,(sh, '-c', command))
 
