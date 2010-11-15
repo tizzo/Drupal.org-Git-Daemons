@@ -11,6 +11,7 @@ from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword
+from twisted.cred.error import UnauthorizedLogin
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor, defer
 from twisted.python import components, log
