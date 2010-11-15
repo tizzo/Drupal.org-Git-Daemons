@@ -28,7 +28,7 @@ log.startLogging(sys.stderr)
 class IGitMetadata(interface.Interface):
     'API for authentication and access control.'
 
-    def repopath(self, username, reponame):
+    def repopath(self, username, reponame, argv):
         '''
         Given a username and repo name, return the full path of the repo on
         the file system.
@@ -54,7 +54,7 @@ class DrupalMeta(object):
         result = response.readline()
         return json.loads(result)
 
-    def repopath(self, username, reponame):
+    def repopath(self, username, reponame, argv):
         '''Note, this is where we could do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
@@ -66,11 +66,14 @@ class DrupalMeta(object):
         log.msg(path)
         if not os.path.exists(path):
           return None
-
-        projectName = reponame[1:] 
-        repos = self.request(username)["repos"]
-        if projectName not in repos:
-          raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
+        
+        # Check to see if anonymous read access is enabled and if this is a read
+        if (not anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
+            # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
+            projectName = reponame[1:] 
+            repos = self.request(username)["repos"]
+            if projectName not in repos:
+                raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
 
         return path
 
@@ -103,7 +106,7 @@ class GitSession(object):
         sh = self.user.shell
 
         # Check permissions by mapping requested path to file system path
-        repopath = self.user.meta.repopath(self.user.username, reponame)
+        repopath = self.user.meta.repopath(self.user.username, reponame, argv)
         if repopath is None:
             raise ConchError('Invalid repository.')
 
