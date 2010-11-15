@@ -1,18 +1,27 @@
-[daemon]
+
+; Settings specific to the SSH Git Server
+
+[drupalSSHGitServer]
 ; Set the location of the private key to be used
 ; in this 
 privateKeyLocation=example-key/key
 ; Set the port this server should run on.
-port=2222
+port=22
 ; Git repository path
 repositoryPath=/git
+; Allow anonymous users to read all repositories (clone and pull)
+anonymousReadAccess=true
+
+; Settings specific to our remote authentication service (generally Drupal)
 
 [remote-auth-server]
 ; Likely the path to your Drupal site.
 ; This may include a port number.
 url=http://localhost
-; This shouldn't change unless you have done somethign funky.
+; This shouldn't change unless you have done something funky.
 path=project-git-auth
+
+; Settings specific to our repository manager daemon.
 
 [beanstalkd-git-repo-manager-daemon]
 repositoryPath=/git

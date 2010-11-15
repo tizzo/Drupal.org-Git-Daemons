@@ -58,7 +58,7 @@ class DrupalMeta(object):
         for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
-        path = config.get('daemon', 'repositoryPath')
+        path = config.get('drupalSSHGitServer', 'repositoryPath')
         path = path + reponame + ".git"
         project = '';
         'Check to see that the folder exists'
@@ -107,7 +107,7 @@ class GitSession(object):
             raise ConchError('Invalid repository.')
 
         command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
-        reactor.spawnProcess(proto, sh,(sh, '-c', command))
+        reactor.spawnProcess(proto, sh, (sh, '-c', command))
 
     def eofReceived(self): pass
 
@@ -178,8 +178,9 @@ if __name__ == '__main__':
     # Load our configurations
     config = ConfigParser.SafeConfigParser()
     config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-    port = config.getint('daemon', 'port')
-    key = config.get('daemon', 'privateKeyLocation')
+    port = config.getint('drupalSSHGitServer', 'port')
+    key = config.get('drupalSSHGitServer', 'privateKeyLocation')
+    anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
     components.registerAdapter(GitSession, GitConchUser, ISession)
     reactor.listenTCP(port, GitServer(key))
     reactor.run()
