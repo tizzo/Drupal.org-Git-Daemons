@@ -75,7 +75,9 @@ class GitSession(object):
         if repopath is None:
             raise ConchError('Invalid repository.')
 
-	if ('git-upload-pack' not in argv[:-1]):
+        # Check to see if anonymous read access is enabled and if this is a read
+        if (not anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
+            # If anonymous access for this type of command is not allowed, authenticate the user
             'Build the request to run against drupal'
             url = config.get('remote-auth-server', 'url')
             path = config.get('remote-auth-server', 'path')
@@ -88,7 +90,7 @@ class GitSession(object):
             if projectName not in repos:
                 raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
         command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
-        reactor.spawnProcess(proto, sh,(sh, '-c', command))
+        reactor.spawnProcess(proto, sh, (sh, '-c', command))
 
     def eofReceived(self): pass
 
@@ -145,7 +147,7 @@ if __name__ == '__main__':
     config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
     port = config.getint('drupalSSHGitServer', 'port')
     key = config.get('drupalSSHGitServer', 'privateKeyLocation')
-    anonymousReadAccess = config.get('drupalSSHGitServer', 'anonymousReadAccess')
+    anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
     components.registerAdapter(GitSession, GitConchUser, ISession)
     reactor.listenTCP(port, GitServer(key))
     reactor.run()
