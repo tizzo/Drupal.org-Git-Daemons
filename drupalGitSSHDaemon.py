@@ -162,6 +162,7 @@ class GitServer(SSHFactory):
     authmeta = DrupalMeta()
     portal = Portal(GitRealm(authmeta))
     portal.registerChecker(GitPubKeyChecker(authmeta))
+    portal.registerChecker(GitPasswordChecker(authmeta))
 
     def __init__(self, privkey):
         pubkey = '.'.join((privkey, 'pub'))
