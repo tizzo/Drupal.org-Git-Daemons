@@ -58,7 +58,7 @@ class DrupalMeta(object):
         for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
-        path = config.get('daemon', 'reposiotryPath')
+        path = config.get('daemon', 'repositoryPath')
         path = path + reponame
         project = '';
         'Check to see that the folder exists'
