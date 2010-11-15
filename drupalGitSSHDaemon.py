@@ -10,6 +10,7 @@ from twisted.conch.ssh.session import ISession, SSHSession
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.cred.checkers import ICredentialsChecker
+from twisted.cred.credentials import IUsernamePassword
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor, defer
 from twisted.python import components, log
@@ -43,6 +44,14 @@ class IGitMetadata(interface.Interface):
         '''
 
 class DrupalMeta(object):
+    def request(self, username):
+        'Build the request to run against drupal'
+        url = config.get('remote-auth-server', 'url')
+        path = config.get('remote-auth-server', 'path')
+        params = urllib.urlencode({'user' : username})
+        response = urllib.urlopen(url + '/' + path + '?%s' % params)
+        result = response.readline()
+        return json.loads(result)
 
     def repopath(self, username, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
@@ -57,6 +66,12 @@ class DrupalMeta(object):
           return None
         return path
 
+    def pubkeys(self, username):
+        return self.request(username)["keys"]
+
+    def passwords(self, username):
+        return self.request(username)["password"],
+
 def find_git_shell():
     # Find git-shell path.
     # Adapted from http://bugs.python.org/file15381/shutil_which.patch
@@ -67,7 +82,6 @@ def find_git_shell():
                 os.access(full_path, (os.F_OK | os.X_OK))):
             return full_path
     raise Exception('Could not find git executable!')
-
 
 class GitSession(object):
     interface.implements(ISession)
@@ -85,14 +99,6 @@ class GitSession(object):
         if repopath is None:
             raise ConchError('Invalid repository.')
 
-        'Build the request to run against drupal'
-        url = config.get('remote-auth-server', 'url')
-        path = config.get('remote-auth-server', 'path')
-        fingerprint = Key.fromString(self.user.meta.credentials.blob, 'BLOB').fingerprint()
-        params = urllib.urlencode({'fingerprint' : fingerprint})
-        response = urllib.urlopen(url + '/' + path + '?%s' % params)
-        result = response.readline()
-        repos = json.loads(result)
         projectName = reponame[1:-4] 
         if projectName not in repos:
           raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
@@ -132,10 +138,12 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
         self.meta = meta
 
     def checkKey(self, credentials):
-        self.meta.credentials = credentials
-        if (credentials.username != 'git'):
-            return False
-        return True
+        fingerprint = Key.fromString(credentials.blob).fingerprint()
+        fingerprint = fingerprint.replace(':','')
+        for k in self.meta.pubkeys(credentials.username):
+            if k == fingerprint:
+                return True
+        return False
         
 class GitPasswordChecker(object):
     credentialInterfaces = IUsernamePassword,
