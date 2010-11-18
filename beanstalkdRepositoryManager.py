@@ -20,22 +20,30 @@ if __name__ == '__main__':
   url = config.get('beanstalkd-git-repo-manager-daemon', 'url')
   port = config.getint('beanstalkd-git-repo-manager-daemon', 'port')
   beanstalk = beanstalkc.Connection(host=url, port=port)
-  print 'should be up'
+  print 'The repository manager daemon has started.'
 
   ''' 
     TODO: This is a dead simple implementation and should be made a proper daemon 
     (probably using http://pypi.python.org/pypi/python-daemon or similar)
   '''
   while True:
-    print 'looping'
+    print 'Listening for a new beanstalkd job'
     job = beanstalk.reserve()
     jobData = json.loads(job.body)
     repo = repositoryPath + '/' + jobData['project'] + '.git'
     if (jobData['operation'] == 'create'):
-      os.mkdir(repo)
-      os.chdir(repo)
-      subprocess.call(['git', 'init', '--bare'], shell=False)
-      os.chdir(repo)
+      print 'Creating a new repository at %s' % (repo)
+      try:
+        os.mkdir(repo)
+        os.chdir(repo)
+        subprocess.call(['git', 'init', '--bare'], shell=False)
+        os.chdir(repositoryPath)
+      except:
+        print 'Creation FAILED!'
     elif (jobData['operation'] == 'delete'):
-      subprocess.call(['rm', '-rf', (repo)], shell=False)
+      print 'Deleting the repository at %s' % (repo)
+      try:
+        subprocess.call(['rm', '-rf', (repo)], shell=False)
+      except:
+        print 'Deletion FAILED!'
     job.delete()
