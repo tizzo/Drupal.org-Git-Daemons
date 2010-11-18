@@ -60,7 +60,7 @@ class DrupalMeta(object):
 
         'Build the path to the repository'
         path = config.get('drupalSSHGitServer', 'repositoryPath')
-        path = path + reponame + ".git"
+        path = path + reponame
         project = '';
         'Check to see that the folder exists'
         log.msg(path)
@@ -73,6 +73,7 @@ class DrupalMeta(object):
             projectName = reponame[1:] 
             repos = self.request(username)["repos"]
             if projectName not in repos:
+                # TODO: We should populate data that can be used by git scripts to provide better access denial
                 raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
 
         return path
