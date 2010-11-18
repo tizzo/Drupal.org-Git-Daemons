@@ -72,9 +72,9 @@ class DrupalMeta(object):
             # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
             projectName = reponame[1:] 
             repos = self.request(username)["repos"]
-            if projectName not in repos:
+            if projectName[:-4] not in repos:
                 # TODO: We should populate data that can be used by git scripts to provide better access denial
-                raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
+                raise ConchError('Permission denied %s was not in %s' % (projectName[:-4], repos))
 
         return path
 
