@@ -19,18 +19,24 @@ Beanstalk can easily be built from source.  Once you have [beanstalkd](http://kr
 
 #### Install beanstalkc
 
+All install instructions are Ubuntu / Debian focused.
+
 - Ensure that you have easy_install installed (on debian/ubuntu `apt-get install python-dev  python-setuptools`).
 - Install beanstalkc's YAML dependency: `easy_install PyYAML`.
 - Run `git clone https://github.com/earl/beanstalkc.git`
 - Move into the beanstalkc directory `cd beanstalkc`
 - Run the installer `python setup.py install`
+- Copy and configure the configuration file `cp drupaldaemons.cnf.default drupaldaemons.cnf` and `nano drupaldaemons.cnf`
 
+#### Configure the daemon
+
+Configure the daemon in the drupaldaemons.cnf to properly point to a local directory on your system and at your drupal site where [Project Git Auth](https://github.com/tizzo/Project-Git-Auth) is properly installed.
 
 ### Starting the repo manager
 
 Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from inside this repository.
 
-###Install the [Project Git Auth](https://github.com/tizzo/Project-Git-Auth) module
+### Install and configure the [Project Git Auth](https://github.com/tizzo/Project-Git-Auth) module
 
 ## Drupal Git SSH Daemon
 
@@ -40,6 +46,8 @@ Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from insi
 
 ### Installing Twisted
 
+All install instructions are Ubuntu / Debian focused.
+
 - Ensure that you have easy_install installed (on debian/ubuntu `apt-get install python-dev  python-setuptools`).
 - On Ubuntu, `apt-get install python-twisted`
 - Install zope
@@ -47,6 +55,7 @@ Once you have beanstalk started run `./beanstalkdRepositoryManager.py` from insi
 - Untar Twisted `tar -xvf Twisted-10.1.0.tar.bz2`
 - Move into the Twisted directory `cd Twisted-10.1.0`
 - Run the Twisted installer `pyton setup.py install`
+- Copy and configure the configuration file `cp drupaldaemons.cnf.default drupaldaemons.cnf`
 
 #### Configure the daemon
 
