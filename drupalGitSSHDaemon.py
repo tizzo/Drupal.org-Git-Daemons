@@ -22,6 +22,7 @@ import urllib
 import base64
 import json
 import hashlib
+import exceptions
 
 log.startLogging(sys.stderr)
 
@@ -50,9 +51,14 @@ class DrupalMeta(object):
         url = config.get('remote-auth-server', 'url')
         path = config.get('remote-auth-server', 'path')
         params = urllib.urlencode({'user' : username})
-        response = urllib.urlopen(url + '/' + path + '?%s' % params)
-        result = response.readline()
-        return json.loads(result)
+        try:
+            response = urllib.urlopen(url + '/' + path + '?%s' % params)
+            result = response.readline()
+            return json.loads(result)
+        except exceptions.IOError:
+            log.msg("ERROR: Could not connect to Drupal auth service.")
+            log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
+            return {"keys":[], "password":None, "repos":[]}
 
     def repopath(self, username, reponame, argv):
         '''Note, this is where we could do further mapping into a subdirectory
