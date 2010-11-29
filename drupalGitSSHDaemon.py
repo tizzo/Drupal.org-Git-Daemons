@@ -47,10 +47,15 @@ class IGitMetadata(interface.Interface):
 
 class DrupalMeta(object):
     interface.implements(IGitMetadata)
+    def __init__(self):
+        # Load our configurations
+        self.config = ConfigParser.SafeConfigParser()
+        self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+
     def request(self, username):
         'Build the request to run against drupal'
-        url = config.get('remote-auth-server', 'url')
-        path = config.get('remote-auth-server', 'path')
+        url = self.config.get('remote-auth-server', 'url')
+        path = self.config.get('remote-auth-server', 'path')
         params = urllib.urlencode({'user' : username})
         try:
             response = urllib.urlopen(url + '/' + path + '?%s' % params)
@@ -66,7 +71,7 @@ class DrupalMeta(object):
         for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
-        path = config.get('drupalSSHGitServer', 'repositoryPath')
+        path = self.config.get('drupalSSHGitServer', 'repositoryPath')
         path = path + reponame
         project = '';
         'Check to see that the folder exists'
@@ -185,14 +190,20 @@ class GitServer(SSHFactory):
         self.privateKeys = {'ssh-rsa': Key.fromFile(privkey)}
         self.publicKeys = {'ssh-rsa': Key.fromFile(pubkey)}
 
+class Server(object):
+    def __init__(self):
+        # Load our configurations
+        config = ConfigParser.SafeConfigParser()
+        config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        self.port = config.getint('drupalSSHGitServer', 'port')
+        self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
+        self.anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
+        components.registerAdapter(GitSession, GitConchUser, ISession)
+
+    def application(self):
+        return GitServer(self.key)
 
 if __name__ == '__main__':
-    # Load our configurations
-    config = ConfigParser.SafeConfigParser()
-    config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-    port = config.getint('drupalSSHGitServer', 'port')
-    key = config.get('drupalSSHGitServer', 'privateKeyLocation')
-    anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
-    components.registerAdapter(GitSession, GitConchUser, ISession)
-    reactor.listenTCP(port, GitServer(key))
+    ssh_server = Server()
+    reactor.listenTCP(ssh_server.port, ssh_server.application())
     reactor.run()
