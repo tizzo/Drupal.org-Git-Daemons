@@ -46,6 +46,7 @@ class IGitMetadata(interface.Interface):
         '''
 
 class DrupalMeta(object):
+    interface.implements(IGitMetadata)
     def request(self, username):
         'Build the request to run against drupal'
         url = config.get('remote-auth-server', 'url')
@@ -76,7 +77,7 @@ class DrupalMeta(object):
         # Check to see if anonymous read access is enabled and if this is a read
         if (not anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
-            projectName = reponame[1:] 
+            projectName = reponame[1:-4]
             repos = self.request(username)["repos"]
             if projectName not in repos:
                 # TODO: We should populate data that can be used by git scripts to provide better access denial
