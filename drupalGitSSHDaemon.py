@@ -51,11 +51,11 @@ class DrupalMeta(object):
         self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
         self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
-    def request(self, username):
+    def request(self, value, var="user"):
         'Build the request to run against drupal'
         url = self.config.get('remote-auth-server', 'url')
         path = self.config.get('remote-auth-server', 'path')
-        params = urllib.urlencode({'user' : username})
+        params = urllib.urlencode({var: value})
         try:
             response = urllib.urlopen(url + '/' + path + '?%s' % params)
             result = response.readline()
@@ -63,9 +63,14 @@ class DrupalMeta(object):
         except exceptions.IOError:
             log.msg("ERROR: Could not connect to Drupal auth service.")
             log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
-            return {"keys":[], "password":None, "repos":[]}
-
     def repopath(self, username, reponame, argv):
+            if var == "user":
+                return {"keys":[], "password":None, "repos":[]}
+            elif var == "fingerprint":
+                return []
+            else:
+                return None
+
         '''Note, this is where we could do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
