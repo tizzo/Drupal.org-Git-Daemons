@@ -169,10 +169,18 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         fingerprint = fingerprint.replace(':','')
-        for k in self.meta.pubkeys(credentials.username):
-            if k == fingerprint:
+        if credentials.username == "git":
+            # Obtain list of valid repos for this public key
+            self.meta.repos = self.meta.request(fingerprint, "fingerprint")
+            if self.meta.repos or self.meta.anonymousReadAccess:
                 return True
-        return False
+            else:
+                return False
+        else:
+            for k in self.meta.pubkeys(credentials.username):
+                if k == fingerprint:
+                    return True
+            return False
         
 class GitPasswordChecker(object):
     credentialInterfaces = IUsernamePassword,
