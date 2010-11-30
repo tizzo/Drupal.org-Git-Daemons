@@ -63,7 +63,6 @@ class DrupalMeta(object):
         except exceptions.IOError:
             log.msg("ERROR: Could not connect to Drupal auth service.")
             log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
-    def repopath(self, username, reponame, argv):
             if var == "user":
                 return {"keys":[], "password":None, "repos":[]}
             elif var == "fingerprint":
@@ -71,6 +70,7 @@ class DrupalMeta(object):
             else:
                 return None
 
+    def repopath(self, allowed_repos, reponame, argv):
         '''Note, this is where we could do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
@@ -87,10 +87,9 @@ class DrupalMeta(object):
         if (not self.anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
             projectName = reponame[1:-4]
-            repos = self.request(username)["repos"]
-            if projectName not in repos:
+            if projectName not in allowed_repos:
                 # TODO: We should populate data that can be used by git scripts to provide better access denial
-                raise ConchError('Permission denied %s was not in %s' % (projectName, repos))
+                raise ConchError('Permission denied %s was not in %s' % (projectName, allowed_repos))
 
         return path
 
@@ -122,8 +121,13 @@ class GitSession(object):
         reponame = argv[-1]
         sh = self.user.shell
 
+        if self.user.username == "git":
+            repos = self.user.meta.repos
+        else:
+            repos = self.user.meta.request(self.user.username)["repos"]
+
         # Check permissions by mapping requested path to file system path
-        repopath = self.user.meta.repopath(self.user.username, reponame, argv)
+        repopath = self.user.meta.repopath(repos, reponame, argv)
         if repopath is None:
             raise ConchError('Invalid repository.')
 
