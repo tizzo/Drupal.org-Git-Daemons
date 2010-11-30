@@ -24,8 +24,6 @@ import json
 import hashlib
 import exceptions
 
-log.startLogging(sys.stderr)
-
 class IGitMetadata(interface.Interface):
     'API for authentication and access control.'
 
@@ -204,6 +202,7 @@ class Server(object):
         return GitServer(self.key)
 
 if __name__ == '__main__':
+    log.startLogging(sys.stderr)
     ssh_server = Server()
     reactor.listenTCP(ssh_server.port, ssh_server.application())
     reactor.run()
