@@ -189,11 +189,15 @@ class GitPasswordChecker(object):
         self.meta = meta
 
     def requestAvatarId(self, credentials):
-        for k in self.meta.passwords(credentials.username):
-            md5_password = hashlib.md5(credentials.password).hexdigest()
-            if k == md5_password:
-                return defer.succeed(credentials.username)
-        return defer.fail(UnauthorizedLogin("invalid password"))
+        if credentials.username == "git":
+            # Don't check passwords for the "git" user
+            return defer.succeed(credentials.username)
+        else:
+            for k in self.meta.passwords(credentials.username):
+                md5_password = hashlib.md5(credentials.password).hexdigest()
+                if k == md5_password:
+                    return defer.succeed(credentials.username)
+            return defer.fail(UnauthorizedLogin("invalid password"))
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
