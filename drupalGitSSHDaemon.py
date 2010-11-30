@@ -49,6 +49,7 @@ class DrupalMeta(object):
         # Load our configurations
         self.config = ConfigParser.SafeConfigParser()
         self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
     def request(self, username):
         'Build the request to run against drupal'
@@ -78,7 +79,7 @@ class DrupalMeta(object):
           return None
         
         # Check to see if anonymous read access is enabled and if this is a read
-        if (not anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
+        if (not self.anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
             projectName = reponame[1:-4]
             repos = self.request(username)["repos"]
@@ -195,7 +196,6 @@ class Server(object):
         config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
         self.port = config.getint('drupalSSHGitServer', 'port')
         self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
-        self.anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
         components.registerAdapter(GitSession, GitConchUser, ISession)
 
     def application(self):
