@@ -22,8 +22,7 @@ import urllib
 import base64
 import json
 import hashlib
-
-log.startLogging(sys.stderr)
+import exceptions
 
 class IGitMetadata(interface.Interface):
     'API for authentication and access control.'
@@ -45,21 +44,38 @@ class IGitMetadata(interface.Interface):
         '''
 
 class DrupalMeta(object):
-    def request(self, username):
-        'Build the request to run against drupal'
-        url = config.get('remote-auth-server', 'url')
-        path = config.get('remote-auth-server', 'path')
-        params = urllib.urlencode({'user' : username})
-        response = urllib.urlopen(url + '/' + path + '?%s' % params)
-        result = response.readline()
-        return json.loads(result)
+    interface.implements(IGitMetadata)
+    def __init__(self):
+        # Load our configurations
+        self.config = ConfigParser.SafeConfigParser()
+        self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
-    def repopath(self, username, reponame, argv):
+    def request(self, value, var="user"):
+        'Build the request to run against drupal'
+        url = self.config.get('remote-auth-server', 'url')
+        path = self.config.get('remote-auth-server', 'path')
+        params = urllib.urlencode({var: value})
+        try:
+            response = urllib.urlopen(url + '/' + path + '?%s' % params)
+            result = response.readline()
+            return json.loads(result)
+        except exceptions.IOError:
+            log.msg("ERROR: Could not connect to Drupal auth service.")
+            log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
+            if var == "user":
+                return {"keys":[], "password":None, "repos":[]}
+            elif var == "fingerprint":
+                return []
+            else:
+                return None
+
+    def repopath(self, allowed_repos, reponame, argv):
         '''Note, this is where we could do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
         'Build the path to the repository'
-        path = config.get('drupalSSHGitServer', 'repositoryPath')
+        path = self.config.get('drupalSSHGitServer', 'repositoryPath')
         path = path + reponame
         project = '';
         'Check to see that the folder exists'
@@ -68,13 +84,12 @@ class DrupalMeta(object):
           return None
         
         # Check to see if anonymous read access is enabled and if this is a read
-        if (not anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
+        if (not self.anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
-            projectName = reponame[1:] 
-            repos = self.request(username)["repos"]
-            if projectName[:-4] not in repos:
+            projectName = reponame[1:-4]
+            if projectName not in allowed_repos:
                 # TODO: We should populate data that can be used by git scripts to provide better access denial
-                raise ConchError('Permission denied %s was not in %s' % (projectName[:-4], repos))
+                raise ConchError('Permission denied %s was not in %s' % (projectName, allowed_repos))
 
         return path
 
@@ -106,8 +121,13 @@ class GitSession(object):
         reponame = argv[-1]
         sh = self.user.shell
 
+        if self.user.username == "git":
+            repos = self.user.meta.repos
+        else:
+            repos = self.user.meta.request(self.user.username)["repos"]
+
         # Check permissions by mapping requested path to file system path
-        repopath = self.user.meta.repopath(self.user.username, reponame, argv)
+        repopath = self.user.meta.repopath(repos, reponame, argv)
         if repopath is None:
             raise ConchError('Invalid repository.')
 
@@ -149,10 +169,18 @@ class GitPubKeyChecker(SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         fingerprint = fingerprint.replace(':','')
-        for k in self.meta.pubkeys(credentials.username):
-            if k == fingerprint:
+        if credentials.username == "git":
+            # Obtain list of valid repos for this public key
+            self.meta.repos = self.meta.request(fingerprint, "fingerprint")
+            if self.meta.repos or self.meta.anonymousReadAccess:
                 return True
-        return False
+            else:
+                return False
+        else:
+            for k in self.meta.pubkeys(credentials.username):
+                if k == fingerprint:
+                    return True
+            return False
         
 class GitPasswordChecker(object):
     credentialInterfaces = IUsernamePassword,
@@ -161,11 +189,15 @@ class GitPasswordChecker(object):
         self.meta = meta
 
     def requestAvatarId(self, credentials):
-        for k in self.meta.passwords(credentials.username):
-            md5_password = hashlib.md5(credentials.password).hexdigest()
-            if k == md5_password:
-                return defer.succeed(credentials.username)
-        return defer.fail(UnauthorizedLogin("invalid password"))
+        if credentials.username == "git":
+            # Don't check passwords for the "git" user
+            return defer.succeed(credentials.username)
+        else:
+            for k in self.meta.passwords(credentials.username):
+                md5_password = hashlib.md5(credentials.password).hexdigest()
+                if k == md5_password:
+                    return defer.succeed(credentials.username)
+            return defer.fail(UnauthorizedLogin("invalid password"))
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
@@ -178,14 +210,20 @@ class GitServer(SSHFactory):
         self.privateKeys = {'ssh-rsa': Key.fromFile(privkey)}
         self.publicKeys = {'ssh-rsa': Key.fromFile(pubkey)}
 
+class Server(object):
+    def __init__(self):
+        # Load our configurations
+        config = ConfigParser.SafeConfigParser()
+        config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        self.port = config.getint('drupalSSHGitServer', 'port')
+        self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
+        components.registerAdapter(GitSession, GitConchUser, ISession)
+
+    def application(self):
+        return GitServer(self.key)
 
 if __name__ == '__main__':
-    # Load our configurations
-    config = ConfigParser.SafeConfigParser()
-    config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-    port = config.getint('drupalSSHGitServer', 'port')
-    key = config.get('drupalSSHGitServer', 'privateKeyLocation')
-    anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
-    components.registerAdapter(GitSession, GitConchUser, ISession)
-    reactor.listenTCP(port, GitServer(key))
+    log.startLogging(sys.stderr)
+    ssh_server = Server()
+    reactor.listenTCP(ssh_server.port, ssh_server.application())
     reactor.run()
