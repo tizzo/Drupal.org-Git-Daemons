@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from drupalGitSSHDaemon import *
 from twisted.cred.credentials import UsernamePassword, SSHPrivateKey
 import random
