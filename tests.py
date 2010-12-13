@@ -8,12 +8,16 @@ class StubMeta(DrupalMeta):
     def __init__(self, keys, passwords):
         self.valid_keys = keys
         self.valid_passwords = passwords
+        self.anonymousReadAccess = False
 
     def request(self, value, var="user"):
         if var == "user":
             return {"keys":self.valid_keys, "password":None, "repos":[]}
         elif var == "fingerprint":
-            return ["test.git"]
+            if value in self.valid_keys:
+                return ["test.git"]
+            else:
+                return []
 
     def repopath(self, username, reponame, argv):
         pass
@@ -41,6 +45,15 @@ class TestPubKeyAuth(unittest.TestCase):
     def test_bad_key(self):
         credentials = SSHPrivateKey(self.user, "dsa", self.bad_blob, None, None)
         self.assertFalse(self.checker.checkKey(credentials))
+
+    def test_good_key_git(self):
+        credentials = SSHPrivateKey("git", "dsa", self.blob, None, None)
+        self.assertTrue(self.checker.checkKey(credentials))
+
+    def test_bad_key_git(self):
+        credentials = SSHPrivateKey("git", "dsa", self.bad_blob, None, None)
+        self.assertFalse(self.checker.checkKey(credentials))
+
 
 class TestPasswordAuth(unittest.TestCase):
     user = 'test'
