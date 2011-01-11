@@ -15,12 +15,11 @@ anonymousReadAccess=true
 
 ; Settings specific to our remote authentication service (generally Drupal)
 
-[remote-auth-server]
-; Likely the path to your Drupal site.
-; This may include a port number.
-url=http://localhost
-; This shouldn't change unless you have done something funky.
-path=versioncontrol-project-git-auth-service
+[drush-settings]
+; Set this to the path of your drupal site you wish to authenticate against
+webroot=/var/www/drupal
+; Set this to the path the the drush script on your local machine.
+drushPath=/usr/bin/drush
 
 ; Settings specific to our repository manager daemon.
 

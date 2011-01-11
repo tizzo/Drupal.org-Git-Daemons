@@ -18,6 +18,7 @@ from twisted.python import components, log
 from zope import interface
 
 import ConfigParser
+import subprocess
 import urllib
 import base64
 import json
@@ -72,15 +73,15 @@ class DrupalMeta(object):
                     ssh_keys: { key_name:fingerprint }
                    }
         }"""
-        url = self.config.get('remote-auth-server', 'url')
-        path = self.config.get('remote-auth-server', 'path')
         try:
-            response = urllib.urlopen(url + '/' + path + '{0}'.format(uri))
-            result = response.readline()
+            webroot = self.config.get('drush-settings', 'webroot')
+            drushPath = self.config.get('drush-settings', 'drushPath')
+            command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, uri[1:-4])
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
             return json.loads(result)
         except exceptions.IOError:
-            log.msg("ERROR: Could not connect to Drupal auth service.")
-            log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
+            log.msg("ERROR: Could not retrieve auth information from .")
+            log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
             return None
 
     def repopath(self, reponame):
@@ -89,7 +90,7 @@ class DrupalMeta(object):
 
         # Build the path to the repository
         path = self.config.get('drupalSSHGitServer', 'repositoryPath')
-        path = path + reponame + ".git"
+        path = path + reponame
 
         # Check to see that the folder exists
         log.msg(path)
