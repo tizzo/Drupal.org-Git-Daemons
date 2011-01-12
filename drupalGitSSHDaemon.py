@@ -24,10 +24,13 @@ import json
 import hashlib
 import exceptions
 
+class ConchAuthError(ConchError):
+    pass
+
 class IGitMetadata(interface.Interface):
     'API for authentication and access control.'
 
-    def repopath(self, username, reponame, argv):
+    def repopath(self, reponame):
         '''
         Given a username and repo name, return the full path of the repo on
         the file system.
@@ -75,7 +78,7 @@ class DrupalMeta(object):
         url = self.config.get('remote-auth-server', 'url')
         path = self.config.get('remote-auth-server', 'path')
         try:
-            response = urllib.urlopen(url + '/' + path + '/{0}'.format(uri))
+            response = urllib.urlopen(url + '/' + path + '{0}'.format(uri))
             result = response.readline()
             return json.loads(result)
         except exceptions.IOError:
@@ -83,27 +86,18 @@ class DrupalMeta(object):
             log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
             return None
 
-    def repopath(self, allowed_repos, reponame, argv):
+    def repopath(self, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
-        'Build the path to the repository'
+        # Build the path to the repository
         path = self.config.get('drupalSSHGitServer', 'repositoryPath')
-        path = path + reponame
-        project = '';
-        'Check to see that the folder exists'
+        path = path + reponame + ".git"
+
+        # Check to see that the folder exists
         log.msg(path)
         if not os.path.exists(path):
-          return None
-        
-        # Check to see if anonymous read access is enabled and if this is a read
-        if (not self.anonymousReadAccess or 'git-upload-pack' not in argv[:-1]):
-            # If anonymous access for this type of command is not allowed, check if the user is a maintainer for projectName
-            projectName = reponame[1:-4]
-            if projectName not in allowed_repos:
-                # TODO: We should populate data that can be used by git scripts to provide better access denial
-                raise ConchError('Permission denied %s was not in %s' % (projectName, allowed_repos))
-
+            return None
         return path
 
     def pubkeys(self, username):
@@ -129,23 +123,57 @@ class GitSession(object):
     def __init__(self, user):
         self.user = user
 
+    def auth(self, reponame, argv):
+        # Key fingerprint
+        if hasattr(self.user.meta, "fingerprint"):
+            fingerprint = self.user.meta.fingerprint
+        else:
+            fingerprint = None
+
+        if hasattr(self.user.meta, "password"):
+            password = self.user.meta.password
+        else:
+            password = None
+
+        # Check to see if anonymous read access is enabled and if 
+        # this is a read
+        if (not self.user.meta.anonymousReadAccess or \
+                'git-upload-pack' not in argv[:-1]):
+            # If anonymous access for this type of command is not allowed, 
+            # check if the user is a maintainer on this project
+            # git:key, user:key, user:password
+            auth_service = self.user.meta.request(reponame)
+            if self.user.username == "git":
+                for user in auth_service.values():
+                    if fingerprint in user["ssh_keys"].values():
+                        return True
+            elif self.user.username in auth_service.keys():
+                if fingerprint in auth_service[self.user.username]["ssh_keys"].values():
+                    return True
+            elif self.user.username in auth_service.keys():
+                if auth_service[self.user.username]["pass"] == password:
+                    return True
+            else:
+                return False
+        else:
+            # Read only command and anonymous access is enabled
+            return True
+
     def execCommand(self, proto, cmd):
         argv = shlex.split(cmd)
         reponame = argv[-1]
         sh = self.user.shell
 
-        if self.user.username == "git":
-            repos = self.user.meta.repos
+        if self.auth(reponame, argv):
+            # Check permissions by mapping requested path to file system path
+            repopath = self.user.meta.repopath(reponame)
+            if repopath is None:
+                raise ConchError('Invalid repository.')
+
+            command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
+            reactor.spawnProcess(proto, sh, (sh, '-c', command))
         else:
-            repos = self.user.meta.request(self.user.username)["repos"]
-
-        # Check permissions by mapping requested path to file system path
-        repopath = self.user.meta.repopath(repos, reponame, argv)
-        if repopath is None:
-            raise ConchError('Invalid repository.')
-
-        command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
-        reactor.spawnProcess(proto, sh, (sh, '-c', command))
+            raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
 
     def eofReceived(self): pass
 
@@ -212,11 +240,37 @@ class GitPasswordChecker(object):
                     return defer.succeed(credentials.username)
             return defer.fail(UnauthorizedLogin("invalid password"))
 
+class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
+    """Skip most of the auth process until the SSH session starts.
+
+    Save the public key fingerprint for later use."""
+    def __init__(self, meta):
+        self.meta = meta
+
+    def checkKey(self, credentials):
+        fingerprint = Key.fromString(credentials.blob).fingerprint()
+        self.meta.fingerprint = fingerprint.replace(':','')
+        return True
+
+class GitPasswordPassthroughChecker(object):
+    """Skip most of the auth process until the SSH session starts.
+
+    Save the password hash for later use."""
+    credentialInterfaces = IUsernamePassword,
+    interface.implements(ICredentialsChecker)
+
+    def __init__(self, meta):
+        self.meta = meta
+
+    def requestAvatarId(self, credentials):
+        self.meta.password = hashlib.md5(credentials.password).hexdigest()
+        return defer.succeed(credentials.username)
+
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
     portal = Portal(GitRealm(authmeta))
-    portal.registerChecker(GitPubKeyChecker(authmeta))
-    portal.registerChecker(GitPasswordChecker(authmeta))
+    portal.registerChecker(GitPubKeyPassthroughChecker(authmeta))
+    portal.registerChecker(GitPasswordPassthroughChecker(authmeta))
 
     def __init__(self, privkey):
         pubkey = '.'.join((privkey, 'pub'))
