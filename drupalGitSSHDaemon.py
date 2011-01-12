@@ -78,7 +78,8 @@ class DrupalMeta(object):
             drushPath = self.config.get('drush-settings', 'drushPath')
             command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, uri[1:-4])
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-            return json.loads(result)
+            self.repoAuthData = json.loads(result)
+            return self.repoAuthData["users"]
         except exceptions.IOError:
             log.msg("ERROR: Could not retrieve auth information from .")
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
