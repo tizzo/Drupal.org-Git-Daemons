@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Quick start-stop-daemon example, derived from Debian /etc/init.d/ssh
+set -e
+
+# Must be a valid filename
+NAME=drupalGitSSHDaemon
+PIDFILE=/var/run/$NAME.pid
+#This is the command to be run, give the full pathname
+DAEMON=/usr/bin/twistd
+DAEMON_OPTS="-ny /usr/local/bin/Drupal.org-Git-Daemons/drupalGitSSHDaemon.tac"
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+case "$1" in
+  start)
+    echo -n "Starting daemon: "$NAME"\n"
+    start-stop-daemon --start -b --oknodo --user git --name $NAME --chuid git --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+    sudo start-stop-daemon --start --oknodo --user git --name beanz --chuid git --pidfile $PIDFILE --exec $DAEMON -- -ny /home/webadmin/Drupal.org-Git-Daemons/drupalGitSSHDaemon.tac
+    echo "."
+  ;;
+  stop)
+    echo -n "Stopping daemon: "$NAME"\n"
+    start-stop-daemon --stop --quiet -u git --oknodo --pidfile $PIDFILE
+    echo "."
+  ;;
+  restart)
+    echo -n "Restarting daemon: "$NAME"\n"
+    start-stop-daemon --stop --quiet -u git --oknodo --retry 30 --pidfile $PIDFILE
+    start-stop-daemon --start -b --oknodo --user git --name $NAME --chuid git --pidfile $PIDFILE --exec $DAEMON -- $DAEMON_OPTS
+    echo "."
+  ;;
+
+  *)
+  echo "Usage: "$1" {start|stop|restart}"
+  exit 1
+esac
+
+exit 0
