@@ -36,16 +36,6 @@ class IGitMetadata(interface.Interface):
         the file system.
         '''
 
-    def pubkeys(self, username):
-        '''
-        Return the list of valid public keys for a user.
-        '''
-
-    def passwords(self, username):
-        '''
-        Return the list of valid password hashes for a user.
-        '''
-
 class DrupalMeta(object):
     interface.implements(IGitMetadata)
     def __init__(self):
@@ -99,12 +89,6 @@ class DrupalMeta(object):
         if not os.path.exists(path):
             return None
         return path
-
-    def pubkeys(self, username):
-        return self.request(username)["keys"]
-
-    def passwords(self, username):
-        return self.request(username)["password"],
 
 def find_git_shell():
     # Find git-shell path.
@@ -201,44 +185,6 @@ class GitRealm(object):
     def requestAvatar(self, username, mind, *interfaces):
         user = GitConchUser(username, self.meta)
         return interfaces[0], user, user.logout
-
-
-class GitPubKeyChecker(SSHPublicKeyDatabase):
-    def __init__(self, meta):
-        self.meta = meta
-
-    def checkKey(self, credentials):
-        fingerprint = Key.fromString(credentials.blob).fingerprint()
-        fingerprint = fingerprint.replace(':','')
-        if credentials.username == "git":
-            # Obtain list of valid repos for this public key
-            self.meta.repos = self.meta.request(fingerprint, "fingerprint")
-            if self.meta.repos or self.meta.anonymousReadAccess:
-                return True
-            else:
-                return False
-        else:
-            for k in self.meta.pubkeys(credentials.username):
-                if k == fingerprint:
-                    return True
-            return False
-        
-class GitPasswordChecker(object):
-    credentialInterfaces = IUsernamePassword,
-    interface.implements(ICredentialsChecker)
-    def __init__(self, meta):
-        self.meta = meta
-
-    def requestAvatarId(self, credentials):
-        if credentials.username == "git":
-            # Don't check passwords for the "git" user
-            return defer.succeed(credentials.username)
-        else:
-            for k in self.meta.passwords(credentials.username):
-                md5_password = hashlib.md5(credentials.password).hexdigest()
-                if k == md5_password:
-                    return defer.succeed(credentials.username)
-            return defer.fail(UnauthorizedLogin("invalid password"))
 
 class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
     """Skip most of the auth process until the SSH session starts.
