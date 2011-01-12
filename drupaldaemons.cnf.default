@@ -4,9 +4,10 @@
 [drupalSSHGitServer]
 ; Set the location of the private key to be used
 ; in this 
-privateKeyLocation=example-key/key
+;privateKeyLocation=example-key/key
+privateKeyLocation=/etc/twisted-keys/default
 ; Set the port this server should run on.
-port=22
+port=2222
 ; Git repository path
 repositoryPath=/git
 ; Allow anonymous users to read all repositories (clone and pull)

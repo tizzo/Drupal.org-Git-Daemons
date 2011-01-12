@@ -24,6 +24,14 @@ import json
 import hashlib
 import exceptions
 
+def configure():
+    config = ConfigParser.SafeConfigParser()
+    try:
+        config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+    except IOError:
+        config.readfp(open("/etc/drupaldaemons.cnf"))
+    return config
+
 class ConchAuthError(ConchError):
     pass
 
@@ -40,8 +48,7 @@ class DrupalMeta(object):
     interface.implements(IGitMetadata)
     def __init__(self):
         # Load our configurations
-        self.config = ConfigParser.SafeConfigParser()
-        self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        self.config = configure()
         self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
     def request(self, uri):
@@ -226,8 +233,7 @@ class GitServer(SSHFactory):
 class Server(object):
     def __init__(self):
         # Load our configurations
-        config = ConfigParser.SafeConfigParser()
-        config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
+        config = configure()
         self.port = config.getint('drupalSSHGitServer', 'port')
         self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
         components.registerAdapter(GitSession, GitConchUser, ISession)
