@@ -51,24 +51,37 @@ class DrupalMeta(object):
         self.config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
         self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
-    def request(self, value, var="user"):
-        'Build the request to run against drupal'
+    def request(self, uri):
+        """Build the request to run against drupal
+
+        request(project uri)
+
+        Values and structure returned:
+        {username: {uid:int, 
+                    repo_id:int, 
+                    access:boolean, 
+                    branch_create:boolean, 
+                    branch_update:boolean, 
+                    branch_delete:boolean, 
+                    tag_create:boolean,
+                    tag_update:boolean,
+                    tag_delete:boolean,
+                    per_label:list,
+                    name:str,
+                    pass:md5,
+                    ssh_keys: { key_name:fingerprint }
+                   }
+        }"""
         url = self.config.get('remote-auth-server', 'url')
         path = self.config.get('remote-auth-server', 'path')
-        params = urllib.urlencode({var: value})
         try:
-            response = urllib.urlopen(url + '/' + path + '?%s' % params)
+            response = urllib.urlopen(url + '/' + path + '/{0}'.format(uri))
             result = response.readline()
             return json.loads(result)
         except exceptions.IOError:
             log.msg("ERROR: Could not connect to Drupal auth service.")
             log.msg("Verify project-git-auth is enabled and remote-auth-server settings are correct.")
-            if var == "user":
-                return {"keys":[], "password":None, "repos":[]}
-            elif var == "fingerprint":
-                return []
-            else:
-                return None
+            return None
 
     def repopath(self, allowed_repos, reponame, argv):
         '''Note, this is where we could do further mapping into a subdirectory

@@ -19,7 +19,7 @@ anonymousReadAccess=true
 ; This may include a port number.
 url=http://localhost
 ; This shouldn't change unless you have done something funky.
-path=project-git-auth
+path=versioncontrol-project-git-auth-service
 
 ; Settings specific to our repository manager daemon.
 
