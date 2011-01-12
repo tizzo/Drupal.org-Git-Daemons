@@ -5,7 +5,6 @@
 import os
 import drupalGitSSHDaemon
 from twisted.application import service, internet
-from twisted.web import static, server
 from twisted.python.log import ILogObserver, FileLogObserver
 from twisted.python.logfile import DailyLogFile
 
