@@ -143,7 +143,6 @@ class GitSession(object):
             elif self.user.username in auth_service.keys():
                 if fingerprint in auth_service[self.user.username]["ssh_keys"].values():
                     return True
-            elif self.user.username in auth_service.keys():
                 if auth_service[self.user.username]["pass"] == password:
                     return True
             else:
