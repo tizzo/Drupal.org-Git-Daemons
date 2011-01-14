@@ -205,7 +205,15 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         self.meta.fingerprint = fingerprint.replace(':','')
-        return True
+	config = configure()
+        webroot = config.get('drush-settings', 'webroot')
+        drushPath = config.get('drush-settings', 'drushPath')
+        command = '%s --root=%s vcs-auth-check-key-exists %s' % (drushPath, webroot, self.meta.fingerprint)
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
+	if result.strip() == 'true':
+          return True
+	else:
+	  return False
 
 class GitPasswordPassthroughChecker(object):
     """Skip most of the auth process until the SSH session starts.
