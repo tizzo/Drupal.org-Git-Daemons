@@ -204,15 +204,21 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         self.meta.fingerprint = fingerprint.replace(':','')
-	config = configure()
-        webroot = config.get('drush-settings', 'webroot')
-        drushPath = config.get('drush-settings', 'drushPath')
-        command = '%s --root=%s vcs-auth-check-key-exists %s' % (drushPath, webroot, self.meta.fingerprint)
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-	if result.strip() == 'true':
-          return True
+	if (credentials.username == 'git'):
+	    return True
 	else:
-	  return False
+	    config = configure()
+            webroot = config.get('drush-settings', 'webroot')
+            drushPath = config.get('drush-settings', 'drushPath')
+            """ If a user specified a non-git username, check that the user's key matches their username
+
+            so that we can request a password if it does not."""
+            command = '%s --root=%s ssh-user-key %s %s' % (drushPath, webroot, credentials.username, self.meta.fingerprint)
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
+	    if result.strip() == 'true':
+                return True
+	    else:
+	        return False
 
 class GitPasswordPassthroughChecker(object):
     """Skip most of the auth process until the SSH session starts.
@@ -226,7 +232,16 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        return defer.succeed(credentials.username)
+	config = configure()
+        webroot = config.get('drush-settings', 'webroot')
+        drushPath = config.get('drush-settings', 'drushPath')
+        command = '%s --root=%s vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
+	if result.strip() == 'true':
+          return defer.succeed(credentials.username)
+	else:
+          return defer.fail(credentials.username)
+
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
