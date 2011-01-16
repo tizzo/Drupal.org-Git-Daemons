@@ -84,6 +84,9 @@ class DrupalMeta(object):
             log.msg("ERROR: Could not retrieve auth information from .")
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
             return None
+        except exceptions.TypeError:
+            log.msg("ERROR: Drush provided bad json.")
+            log.msg(self.repoAuthData.__str__())
 
     def repopath(self, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
