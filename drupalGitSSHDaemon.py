@@ -76,14 +76,17 @@ class DrupalMeta(object):
         try:
             webroot = self.config.get('drush-settings', 'webroot')
             drushPath = self.config.get('drush-settings', 'drushPath')
-            command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, uri[1:-4])
+            command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, self.projectname(uri))
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
             self.repoAuthData = json.loads(result)
             return self.repoAuthData["users"]
         except exceptions.IOError:
-            log.msg("ERROR: Could not retrieve auth information from drush.")
+            log.msg("ERROR: Could not retrieve auth information from %s." % (command,))
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
             return None
+        except exceptions.TypeError:
+            log.msg("ERROR: Drush provided bad json.")
+            log.msg(self.repoAuthData.__str__())
 
     def repopath(self, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
@@ -98,6 +101,16 @@ class DrupalMeta(object):
         if not os.path.exists(path):
             return None
         return path
+
+    def projectname(self, uri):
+        '''Extract the project name alone from a path like /project/views.git'''
+
+        parts = uri.split('/')
+        for part in parts:
+            if len(part) > 4 and part[-4:] == '.git':
+                return part[:-4]
+        log.msg("ERROR: Couldn't determine project name for '%s'." % (uri,))
+
 
 def find_git_shell():
     # Find git-shell path.
