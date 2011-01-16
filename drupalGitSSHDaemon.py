@@ -81,7 +81,7 @@ class DrupalMeta(object):
             self.repoAuthData = json.loads(result)
             return self.repoAuthData["users"]
         except exceptions.IOError:
-            log.msg("ERROR: Could not retrieve auth information from .")
+            log.msg("ERROR: Could not retrieve auth information from %s." % (command,))
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
             return None
         except exceptions.TypeError:
