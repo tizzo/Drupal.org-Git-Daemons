@@ -1,0 +1,67 @@
+#!/bin/sh
+#
+#  Startup script for a Twisted service.
+#
+#  chkconfig: - 85 15
+#  description: Start-up script for the Twisted service "drupalGitSSHDaemon.tac".
+
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+
+pidfile=/var/run/twisted-drupalGitSSHDaemon-0.1.pid
+rundir=/var/lib/twisted-taps/twisted-drupalGitSSHDaemon-0.1/
+file=/etc/twisted-taps/drupalGitSSHDaemon.tac
+logfile=/var/log/twisted-drupalGitSSHDaemon-0.1.log
+
+#  load init function library
+. /etc/init.d/functions
+
+[ -r /etc/default/twisted-drupalGitSSHDaemon-0.1 ] && . /etc/default/twisted-drupalGitSSHDaemon-0.1
+
+#  check for required files
+if [ ! -x /usr/bin/twistd ]
+then
+	echo "$0: Aborting, no /usr/bin/twistd found"
+	exit 0
+fi
+if [ ! -r "$file" ]
+then
+	echo "$0: Aborting, no file $file found."
+	exit 0
+fi
+
+#  set up run directory if necessary
+if [ ! -d "${rundir}" ]
+then
+	mkdir -p "${rundir}"
+fi
+
+
+case "$1" in
+	start)
+		echo -n "Starting twisted-drupalGitSSHDaemon-0.1: twistd"
+		daemon twistd  \
+				--pidfile=$pidfile \
+				--rundir=$rundir \
+				--python=$file \
+				--logfile=$logfile
+		status twisted-drupalGitSSHDaemon-0.1
+		;;
+
+	stop)
+		echo -n "Stopping twisted-drupalGitSSHDaemon-0.1: twistd"
+		kill `cat "${pidfile}"`
+		status twisted-drupalGitSSHDaemon-0.1
+		;;
+
+	restart)
+		"${0}" stop
+		"${0}" start
+		;;
+
+    *)
+		echo "Usage: ${0} {start|stop|restart|}" >&2
+		exit 1
+		;;
+esac
+
+exit 0
