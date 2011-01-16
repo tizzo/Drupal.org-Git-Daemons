@@ -134,17 +134,22 @@ class GitSession(object):
                 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
-            # git:key, user:key, user:password
+            # "git":key
             auth_service = self.user.meta.request(reponame)
             if self.user.username == "git":
                 for user in auth_service.values():
                     if fingerprint in user["ssh_keys"].values():
                         return True
+            # Username in maintainers list
             elif self.user.username in auth_service.keys():
+                # username:key
                 if fingerprint in auth_service[self.user.username]["ssh_keys"].values():
                     return True
-                if auth_service[self.user.username]["pass"] == password:
+                # username:password
+                elif auth_service[self.user.username]["pass"] == password:
                     return True
+                else:
+                    return False
             else:
                 return False
         else:
