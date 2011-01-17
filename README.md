@@ -26,8 +26,8 @@ All install instructions are Ubuntu / Debian focused.
 
 #### Configure the daemon
 
-- Copy and configure the configuration file `cp drupaldaemons.cnf.default /etc/drupaldaemons.cnf`
-- Configure the daemon in the drupaldaemons.cnf to properly point to a local directory on your system and at your drupal site where [Project Git Auth](https://github.com/tizzo/Project-Git-Auth) is properly installed.
+- Copy the default configuration file into the etc folder `cp drupaldaemons.cnf.default /etc/drupaldaemons.cnf`
+- Configure the daemon in the drupaldaemons.cnf to properly point to a local directory on your system and at your Drupal site where where [Versioncontrol Project](http://drupal.org/project/versioncontrol_project) is installed and in use to manage permissions for your repositories.
 
 #### Starting the daemon
 
