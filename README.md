@@ -37,7 +37,7 @@ For a proper deployment, twistd should be used to run the daemon.  If you have i
 
 `TWISTD_OPTS="--uid [uid] --gid [gid] -y /usr/local/bin/Drupal.org-Git-Daemons/drupalGitSSHDaemon.tac"`
 
-Next, run sudo `/etc/init.d/twistd restart`
+Next, run `sudo /etc/init.d/twistd restart`
 
 ------------------------------------------------------
 
