@@ -180,8 +180,10 @@ class GitSession(object):
             if repopath is None:
                 raise ConchError('Invalid repository.')
 
+	    env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame}
+	    env['VERSION_CONTROL_GIT_UID'] = 'self.user.username'
             command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
-            reactor.spawnProcess(proto, sh, (sh, '-c', command))
+            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
             raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
 
