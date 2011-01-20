@@ -24,7 +24,7 @@ import base64
 import json
 import hashlib
 import exceptions
-sys.path[0]='/home/halstead/github/Drupal.org-Git-Daemons'
+
 def configure():
     config = ConfigParser.SafeConfigParser()
     try:
