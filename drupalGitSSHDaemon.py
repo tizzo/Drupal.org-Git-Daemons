@@ -180,7 +180,7 @@ class GitSession(object):
             if repopath is None:
                 raise ConchError('Invalid repository.')
 
-	    env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame}
+	    env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame)}
 	    env['VERSION_CONTROL_GIT_USERNAME'] = self.user.username
             command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
