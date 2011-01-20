@@ -184,12 +184,12 @@ class GitSession(object):
             repopath = self.user.meta.repopath(reponame)
             if repopath is None:
                 raise ConchError('Invalid repository.')
-            if self.user.username not in auth_service:
-                raise ConchError('Authenticated as a user without privileges to this repository.')
-
             env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame,
-                   'VERSION_CONTROL_GIT_UID':auth_service[self.user.username]['uid'],
                    'VERSION_CONTROL_GIT_USERNAME':self.user.username}
+            if self.user.username in auth_service:
+                # The UID is known
+                env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
+
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
