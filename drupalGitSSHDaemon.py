@@ -185,7 +185,7 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
+            raise ConchAuthError("Permission denied when accessing '%s'." % (reponame,))
 
     def eofReceived(self): pass
 
