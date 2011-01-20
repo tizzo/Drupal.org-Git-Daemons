@@ -172,19 +172,19 @@ class GitSession(object):
         argv = shlex.split(cmd)
         reponame = argv[-1]
         sh = self.user.shell
-	auth_service = self.user.meta.request(reponame)
+        auth_service = self.user.meta.request(reponame)
 
         if self.auth(auth_service, argv):
             # Check permissions by mapping requested path to file system path
             repopath = self.user.meta.repopath(reponame)
             if repopath is None:
                 raise ConchError('Invalid repository.')
-	    if self.user.username not in auth_service:
-		raise ConchError('Authenticated as a user without privileges to this repository.')
+            if self.user.username not in auth_service:
+                raise ConchError('Authenticated as a user without privileges to this repository.')
 
-	    env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame,
+            env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame,
                    'VERSION_CONTROL_GIT_UID':auth_service[self.user.username]['uid'],
-		   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
+                   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
@@ -227,10 +227,10 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
     def checkKey(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         self.meta.fingerprint = fingerprint.replace(':','')
-	if (credentials.username == 'git'):
-	    return True
-	else:
-	    config = configure()
+        if (credentials.username == 'git'):
+            return True
+        else:
+            config = configure()
             webroot = config.get('drush-settings', 'webroot')
             drushPath = config.get('drush-settings', 'drushPath')
             """ If a user specified a non-git username, check that the user's key matches their username
@@ -238,10 +238,10 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
             so that we can request a password if it does not."""
             command = '%s --root=%s ssh-user-key %s %s' % (drushPath, webroot, credentials.username, self.meta.fingerprint)
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-	    if result.strip() == 'true':
+            if result.strip() == 'true':
                 return True
-	    else:
-	        return False
+            else:
+                return False
 
 class GitPasswordPassthroughChecker(object):
     """Skip most of the auth process until the SSH session starts.
@@ -255,14 +255,14 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-	config = configure()
+        config = configure()
         webroot = config.get('drush-settings', 'webroot')
         drushPath = config.get('drush-settings', 'drushPath')
         command = '%s --root=%s vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-	if result.strip() == 'true':
+        if result.strip() == 'true':
           return defer.succeed(credentials.username)
-	else:
+        else:
           return defer.fail(credentials.username)
 
 
