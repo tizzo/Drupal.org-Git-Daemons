@@ -24,7 +24,7 @@ import base64
 import json
 import hashlib
 import exceptions
-
+sys.path[0]='/home/halstead/github/Drupal.org-Git-Daemons'
 def configure():
     config = ConfigParser.SafeConfigParser()
     try:
@@ -129,7 +129,7 @@ class GitSession(object):
     def __init__(self, user):
         self.user = user
 
-    def auth(self, reponame, argv):
+    def auth(self, auth_service, argv):
         # Key fingerprint
         if hasattr(self.user.meta, "fingerprint"):
             fingerprint = self.user.meta.fingerprint
@@ -148,7 +148,6 @@ class GitSession(object):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
             # "git":key
-            auth_service = self.user.meta.request(reponame)
             if self.user.username == "git":
                 for user in auth_service.values():
                     if fingerprint in user["ssh_keys"].values():
@@ -173,16 +172,20 @@ class GitSession(object):
         argv = shlex.split(cmd)
         reponame = argv[-1]
         sh = self.user.shell
+	auth_service = self.user.meta.request(reponame)
 
-        if self.auth(reponame, argv):
+        if self.auth(auth_service, argv):
             # Check permissions by mapping requested path to file system path
             repopath = self.user.meta.repopath(reponame)
             if repopath is None:
                 raise ConchError('Invalid repository.')
+	    if self.user.username not in auth_service:
+		raise ConchError('Authenticated as a user without privileges to this repository.')
 
-	    env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame}
-	    env['VERSION_CONTROL_GIT_USERNAME'] = self.user.username
-            command = ' '.join(argv[:-1] + ["'%s'" % (repopath,)])
+	    env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame,
+                   'VERSION_CONTROL_GIT_UID':auth_service[self.user.username]['uid'],
+		   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
+            command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
             raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
