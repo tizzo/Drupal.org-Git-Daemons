@@ -93,16 +93,19 @@ class DrupalMeta(object):
             log.msg("ERROR: Drush provided bad json.")
             log.msg(self.repoAuthData.__str__())
 
-    def repopath(self, reponame):
-        '''Note, this is where we could do further mapping into a subdirectory
+    def repopath(self, scheme, subpath):
+        '''Note, this is where we do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
         # Build the path to the repository
-        path = self.config.get('drupalSSHGitServer', 'repositoryPath')
-        path = path + reponame
-
-        # Check to see that the folder exists
+        try:
+            scheme_path = self.config.get(scheme, 'repositoryPath')
+        except:
+            # Fall back to the default configured path scheme
+            scheme_path = self.config.get('drupalSSHGitServer', 'repositoryPath')
+        path = os.path.join(scheme_path, subpath + ".git")
         log.msg(path)
+        # Check to see that the folder exists
         if not os.path.exists(path):
             return None
         return path
@@ -175,16 +178,18 @@ class GitSession(object):
 
     def execCommand(self, proto, cmd):
         argv = shlex.split(cmd)
-        reponame = argv[-1]
+        repostring = argv[-1]
+        scheme = repostring.split('/')[1]
+        projectname = self.user.meta.projectname(repostring)
         sh = self.user.shell
-        auth_service = self.user.meta.request(reponame)
+        auth_service = self.user.meta.request(repostring)
 
         if self.auth(auth_service, argv):
             # Check permissions by mapping requested path to file system path
-            repopath = self.user.meta.repopath(reponame)
+            repopath = self.user.meta.repopath(scheme, projectname)
             if repopath is None:
                 raise ConchError('Invalid repository.')
-            env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
+            env = {'VERSION_CONTROL_GIT_REPOSITORY':projectname,
                    'VERSION_CONTROL_GIT_USERNAME':self.user.username}
             if self.user.username in auth_service:
                 # The UID is known
@@ -193,7 +198,7 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
+            raise ConchAuthError('Permission denied when accessing {0}'.format(repostring))
 
     def eofReceived(self): pass
 
