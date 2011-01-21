@@ -184,7 +184,7 @@ class GitSession(object):
             repopath = self.user.meta.repopath(reponame)
             if repopath is None:
                 raise ConchError('Invalid repository.')
-            env = {'VERSION_CONTROL_GIT_REPOSITORY':reponame,
+            env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
                    'VERSION_CONTROL_GIT_USERNAME':self.user.username}
             if self.user.username in auth_service:
                 # The UID is known
