@@ -23,7 +23,6 @@ from zope import interface
 SSHSessionProcessProtocol.outConnectionLost = lambda self: None
 
 import ConfigParser
-import subprocess
 import urllib
 import base64
 import json
@@ -38,20 +37,7 @@ def configure():
         config.readfp(open("/etc/drupaldaemons.cnf"))
     return config
 
-class ConchAuthError(ConchError):
-    pass
-
-class IGitMetadata(interface.Interface):
-    'API for authentication and access control.'
-
-    def repopath(self, reponame):
-        '''
-        Given a username and repo name, return the full path of the repo on
-        the file system.
-        '''
-
 class DrupalMeta(object):
-    interface.implements(IGitMetadata)
     def __init__(self):
         # Load our configurations
         self.config = configure()
@@ -193,7 +179,7 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            raise ConchAuthError('Permission denied when accessing {0}'.format(reponame))
+            raise ConchError('Permission denied when accessing {0}'.format(reponame))
 
     def eofReceived(self): pass
 
