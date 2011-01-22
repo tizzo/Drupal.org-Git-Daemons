@@ -216,7 +216,7 @@ class GitPubKeyPassthroughChecker(object):
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            drush_process = drush.DrushProcessProtocol('ssh-user-key')
+            drush_process = drush.DrushProcessProtocol('drupalorg-ssh-user-key')
             drush_process.call(credentials.username, fingerprint)
             def username(self):
                 if self.data:
@@ -238,7 +238,7 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        drush_process = drush.DrushProcessProtocol('vcs-auth-check-user-pass')
+        drush_process = drush.DrushProcessProtocol('drupalorg-vcs-auth-check-user-pass')
         drush_process.call(credentials.username, credentials.password)
         def username(self):
             if self.data:
