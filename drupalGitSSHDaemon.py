@@ -5,13 +5,11 @@ import sys
 from twisted.conch.avatar import ConchUser
 from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.error import ConchError
-from twisted.conch.ssh import common
 from twisted.conch.ssh.session import ISession, SSHSession, SSHSessionProcessProtocol
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.cred.checkers import ICredentialsChecker
-from twisted.cred.credentials import IUsernamePassword
-from twisted.cred.error import UnauthorizedLogin
+from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor, defer
 from twisted.python import components, log
@@ -29,6 +27,7 @@ import hashlib
 import exceptions
 
 from config import config
+import drush
 
 class DrupalMeta(object):
     def __init__(self):
@@ -56,17 +55,17 @@ class DrupalMeta(object):
                    }
         }"""
         try:
-            webroot = config.get('drush-settings', 'webroot')
-            drushPath = config.get('drush-settings', 'drushPath')
-            command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, self.projectname(uri))
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-            
-            self.repoAuthData = json.loads(result)
-            return self.repoAuthData["users"]
+            drush_process = drush.DrushProcessProtocolJSON('vcs-auth-data')
+            drush_process.call(self.projectname(uri))
+            def asynchJSON(self):
+                return self.data
+            drush_process.deferred.addCallback(asynchJSON)
+            return drush_process.deferred
+            #self.repoAuthData = json.loads(result)
+            #return self.repoAuthData["users"]
         except exceptions.IOError:
             log.msg("ERROR: Could not retrieve auth information from %s." % (command,))
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
-            return None
         except exceptions.TypeError:
             log.msg("ERROR: Drush provided bad json.")
             log.msg(self.repoAuthData.__str__())
@@ -82,7 +81,8 @@ class DrupalMeta(object):
         # Check to see that the folder exists
         log.msg(path)
         if not os.path.exists(path):
-            return None
+            raise ConchError('Invalid repository: {0}'.format(reponame))
+
         return path
 
     def projectname(self, uri):
@@ -134,44 +134,53 @@ class GitSession(object):
             if self.user.username == "git":
                 for user in auth_service.values():
                     if fingerprint in user["ssh_keys"].values():
-                        return True
+                        return True, auth_service
             # Username in maintainers list
             elif self.user.username in auth_service.keys():
                 # username:key
                 if fingerprint in auth_service[self.user.username]["ssh_keys"].values():
-                    return True
+                    return True, auth_service
                 # username:password
                 elif auth_service[self.user.username]["pass"] == password:
-                    return True
+                    return True, auth_service
                 else:
                     return False
             else:
                 return False
         else:
             # Read only command and anonymous access is enabled
-            return True
+            return True, auth_service
 
     def execCommand(self, proto, cmd):
         argv = shlex.split(cmd)
+        # This starts an auth request and returns.
+        auth_service_deferred = self.user.meta.request(argv[-1])
+        # Once it completes, auth is run
+        auth_service_deferred.addCallback(self.auth, argv)
+        # Then the result of auth is passed to execGitCommand to run git-shell
+        auth_service_deferred.addCallback(self.execGitCommand, argv, proto)
+
+    def execGitCommand(self, auth_values, argv, proto):
         reponame = argv[-1]
-        sh = self.user.shell
-        auth_service = self.user.meta.request(reponame)
-
-        if self.auth(auth_service, argv):
+        authed, auth_service = auth_values
+        if authed:
             # Check permissions by mapping requested path to file system path
-            repopath = self.user.meta.repopath(reponame)
-            if repopath is None:
-                raise ConchError('Invalid repository.')
-            env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
-                   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
-            if self.user.username in auth_service:
-                # The UID is known
-                env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
+            try:
+                repopath = self.user.meta.repopath(reponame)
+                env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
+                       'VERSION_CONTROL_GIT_USERNAME':self.user.username}
+                if self.user.username in auth_service:
+                    # The UID is known
+                    env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
 
-            command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
-            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
+                command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
+                sh = self.user.shell
+                log.msg(env)
+                reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
+            except ConchError, e:
+                log.err(str(e))
         else:
-            raise ConchError('Permission denied when accessing {0}'.format(reponame))
+            log.err('Permission denied when accessing {0}'.format(reponame))
 
     def eofReceived(self): pass
 
@@ -200,30 +209,34 @@ class GitRealm(object):
         user = GitConchUser(username, self.meta)
         return interfaces[0], user, user.logout
 
-class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
+class GitPubKeyPassthroughChecker(object):
     """Skip most of the auth process until the SSH session starts.
 
     Save the public key fingerprint for later use."""
+    credentialInterfaces = ISSHPrivateKey,
+    interface.implements(ICredentialsChecker)
+
     def __init__(self, meta):
         self.meta = meta
 
-    def checkKey(self, credentials):
+    def requestAvatarId(self, credentials):
         fingerprint = Key.fromString(credentials.blob).fingerprint()
         self.meta.fingerprint = fingerprint.replace(':','')
         if (credentials.username == 'git'):
-            return True
+            return defer.succeed(credentials.username)
         else:
-            webroot = config.get('drush-settings', 'webroot')
-            drushPath = config.get('drush-settings', 'drushPath')
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            command = '%s --root=%s ssh-user-key %s %s' % (drushPath, webroot, credentials.username, self.meta.fingerprint)
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-            if result.strip() == 'true':
-                return True
-            else:
-                return False
+            drush_process = drush.DrushProcessProtocol('ssh-user-key')
+            drush_process.call(credentials.username, fingerprint)
+            def username(self):
+                if self.data:
+                    return credentials.username
+                else:
+                    return defer.fail(credentials.username)
+            drush_process.deferred.addCallback(username)
+            return drush_process.deferred
 
 class GitPasswordPassthroughChecker(object):
     """Skip most of the auth process until the SSH session starts.
@@ -237,15 +250,15 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        webroot = config.get('drush-settings', 'webroot')
-        drushPath = config.get('drush-settings', 'drushPath')
-        command = '%s --root=%s vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
-        if result.strip() == 'true':
-          return defer.succeed(credentials.username)
-        else:
-          return defer.fail(credentials.username)
-
+        drush_process = drush.DrushProcessProtocol('vcs-auth-check-user-pass')
+        drush_process.call(credentials.username, credentials.password)
+        def username(self):
+            if self.data:
+                return credentials.username
+            else:
+                return defer.fail(credentials.username)
+        drush_process.deferred.addCallback(username)
+        return drush_process
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
