@@ -4,6 +4,7 @@ import shlex
 import sys
 from twisted.conch.avatar import ConchUser
 from twisted.conch.error import ConchError
+from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.ssh.session import ISession, SSHSession, SSHSessionProcessProtocol
 from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
@@ -139,6 +140,10 @@ class GitSession(object):
             # Read only command and anonymous access is enabled
             return True, auth_service
 
+    def errorHandler(self, fail):
+        fail.trap(ConchError)
+        log.err(fail.value.value)
+
     def execCommand(self, proto, cmd):
         argv = shlex.split(cmd)
         # This starts an auth request and returns.
@@ -147,26 +152,24 @@ class GitSession(object):
         auth_service_deferred.addCallback(self.auth, argv)
         # Then the result of auth is passed to execGitCommand to run git-shell
         auth_service_deferred.addCallback(self.execGitCommand, argv, proto)
+        auth_service_deferred.addErrback(self.errorHandler)
 
     def execGitCommand(self, auth_values, argv, proto):
         reponame = argv[-1]
         authed, auth_service = auth_values
         if authed:
             # Check permissions by mapping requested path to file system path
-            try:
-                repopath = self.user.meta.repopath(reponame)
-                env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
-                       'VERSION_CONTROL_GIT_USERNAME':self.user.username}
-                if self.user.username in auth_service:
-                    # The UID is known
-                    env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
-
-                command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
-                sh = self.user.shell
-                log.msg(env)
-                reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
-            except ConchError, e:
-                log.err(str(e))
+            repopath = self.user.meta.repopath(reponame)
+            env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
+                   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
+            if self.user.username in auth_service:
+                # The UID is known
+                env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
+                
+            command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
+            sh = self.user.shell
+            log.msg(env)
+            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)    
         else:
             log.err('Permission denied when accessing {0}'.format(reponame))
 
