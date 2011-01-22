@@ -68,7 +68,6 @@ class DrupalMeta(object):
         path = path + reponame
 
         # Check to see that the folder exists
-        log.msg(path)
         if not os.path.exists(path):
             raise ConchError('Invalid repository: {0}'.format(reponame))
 
@@ -81,7 +80,7 @@ class DrupalMeta(object):
         for part in parts:
             if len(part) > 4 and part[-4:] == '.git':
                 return part[:-4]
-        log.msg("ERROR: Couldn't determine project name for '%s'." % (uri,))
+        log.err("ERROR: Couldn't determine project name for '%s'." % (uri,))
 
 
 def find_git_shell():
@@ -121,9 +120,10 @@ class GitSession(object):
             # check if the user is a maintainer on this project
             # "git":key
             if self.user.username == "git":
-                for user in auth_service.values():
+                for user in auth_service["users"].values():
                     if fingerprint in user["ssh_keys"].values():
                         return True, auth_service
+                return False, auth_service
             # Username in maintainers list
             elif self.user.username in auth_service.keys():
                 # username:key
@@ -133,16 +133,20 @@ class GitSession(object):
                 elif auth_service[self.user.username]["pass"] == password:
                     return True, auth_service
                 else:
-                    return False
+                    return False, auth_service
             else:
-                return False
+                return False, auth_service
         else:
             # Read only command and anonymous access is enabled
             return True, auth_service
 
-    def errorHandler(self, fail):
+    def errorHandler(self, fail, proto):
         fail.trap(ConchError)
         log.err(fail.value.value)
+        if proto.connectionMade():
+            proto.loseConnection()
+        else:
+            reactor.spawnProcess(proto, "/bin/false")
 
     def execCommand(self, proto, cmd):
         argv = shlex.split(cmd)
@@ -152,11 +156,13 @@ class GitSession(object):
         auth_service_deferred.addCallback(self.auth, argv)
         # Then the result of auth is passed to execGitCommand to run git-shell
         auth_service_deferred.addCallback(self.execGitCommand, argv, proto)
-        auth_service_deferred.addErrback(self.errorHandler)
+        auth_service_deferred.addErrback(self.errorHandler, proto)
+        return auth_service_deferred
 
     def execGitCommand(self, auth_values, argv, proto):
         reponame = argv[-1]
         authed, auth_service = auth_values
+        sh = self.user.shell
         if authed:
             # Check permissions by mapping requested path to file system path
             repopath = self.user.meta.repopath(reponame)
@@ -167,11 +173,10 @@ class GitSession(object):
                 env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
                 
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
-            sh = self.user.shell
-            log.msg(env)
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)    
         else:
             log.err('Permission denied when accessing {0}'.format(reponame))
+            reactor.spawnProcess(proto, "/bin/false")
 
     def eofReceived(self): pass
 

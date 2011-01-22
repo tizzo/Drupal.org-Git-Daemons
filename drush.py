@@ -1,3 +1,4 @@
+from twisted.conch.error import ConchError
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
@@ -7,6 +8,9 @@ from config import config
 # Load drush settings from drupaldaemons.cnf
 webroot = config.get('drush-settings', 'webroot')
 drush_path = config.get('drush-settings', 'drushPath')
+
+class DrushError(ConchError):
+    pass
 
 class DrushProcessProtocol(ProcessProtocol):
     """Read string values from Drush"""
@@ -31,10 +35,14 @@ class DrushProcessProtocol(ProcessProtocol):
             for each in self.raw_error.split("\n"):
                 log.err("  " + each)
         rc = status.value.exitCode
-        if rc == 0:
+        if self.data and rc == 0:
             self.deferred.callback(self)
         else:
-            self.deferred.errback(rc)
+            if rc == 0:
+                err = DrushError("Failed to read from drush.")
+            else:
+                err = DrushError("Drush failed ({0})".format(rc))
+            self.deferred.errback(err)
 
     def call(self, *args):
         exec_args = (drush_path, "--root={0}".format(webroot), self.command) + args
