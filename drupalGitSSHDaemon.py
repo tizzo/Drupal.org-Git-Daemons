@@ -22,7 +22,6 @@ SSHSessionProcessProtocol.outConnectionLost = lambda self: None
 import urllib
 import base64
 import hashlib
-import exceptions
 
 from config import config
 import drush
@@ -52,19 +51,12 @@ class DrupalMeta(object):
                     ssh_keys: { key_name:fingerprint }
                    }
         }"""
-        try:
-            drush_process = drush.DrushProcessProtocolJSON('vcs-auth-data')
-            drush_process.call(self.projectname(uri))
-            def asynchJSON(self):
-                return self.data
-            drush_process.deferred.addCallback(asynchJSON)
-            return drush_process.deferred
-        except exceptions.IOError:
-            log.msg("ERROR: Could not retrieve auth information from %s." % (command,))
-            log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
-        except exceptions.TypeError:
-            log.msg("ERROR: Drush provided bad json.")
-            log.msg(self.repoAuthData.__str__())
+        drush_process = drush.DrushProcessProtocolJSON('vcs-auth-data')
+        drush_process.call(self.projectname(uri))
+        def JSONasynch(self):
+            return self.data
+        drush_process.deferred.addCallback(JSONasynch)
+        return drush_process.deferred
 
     def repopath(self, reponame):
         '''Note, this is where we could do further mapping into a subdirectory
