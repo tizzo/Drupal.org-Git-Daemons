@@ -241,7 +241,7 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            command = '%s --root=%s ssh-user-key %s %s' % (drushPath, webroot, credentials.username, self.meta.fingerprint)
+            command = '%s --root=%s drupalorg-ssh-user-key %s %s' % (drushPath, webroot, credentials.username, self.meta.fingerprint)
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
             if result.strip() == 'true':
                 return True
@@ -263,7 +263,7 @@ class GitPasswordPassthroughChecker(object):
         config = configure()
         webroot = config.get('drush-settings', 'webroot')
         drushPath = config.get('drush-settings', 'drushPath')
-        command = '%s --root=%s vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
+        command = '%s --root=%s drupalorg-vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
         if result.strip() == 'true':
           return defer.succeed(credentials.username)
