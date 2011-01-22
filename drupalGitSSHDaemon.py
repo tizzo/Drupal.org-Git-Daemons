@@ -3,7 +3,6 @@ import os
 import shlex
 import sys
 from twisted.conch.avatar import ConchUser
-from twisted.conch.checkers import SSHPublicKeyDatabase
 from twisted.conch.error import ConchError
 from twisted.conch.ssh.session import ISession, SSHSession, SSHSessionProcessProtocol
 from twisted.conch.ssh.factory import SSHFactory
@@ -22,7 +21,6 @@ SSHSessionProcessProtocol.outConnectionLost = lambda self: None
 
 import urllib
 import base64
-import json
 import hashlib
 import exceptions
 
@@ -61,8 +59,6 @@ class DrupalMeta(object):
                 return self.data
             drush_process.deferred.addCallback(asynchJSON)
             return drush_process.deferred
-            #self.repoAuthData = json.loads(result)
-            #return self.repoAuthData["users"]
         except exceptions.IOError:
             log.msg("ERROR: Could not retrieve auth information from %s." % (command,))
             log.msg("Verify versioncontrol-project is enabled and drush-settings settings are correct.")
