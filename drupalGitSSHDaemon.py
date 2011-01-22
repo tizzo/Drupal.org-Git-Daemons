@@ -22,26 +22,17 @@ from zope import interface
 # See: http://twistedmatrix.com/trac/ticket/4350
 SSHSessionProcessProtocol.outConnectionLost = lambda self: None
 
-import ConfigParser
 import urllib
 import base64
 import json
 import hashlib
 import exceptions
 
-def configure():
-    config = ConfigParser.SafeConfigParser()
-    try:
-        config.readfp(open(sys.path[0] + '/drupaldaemons.cnf'))
-    except IOError:
-        config.readfp(open("/etc/drupaldaemons.cnf"))
-    return config
+from config import config
 
 class DrupalMeta(object):
     def __init__(self):
-        # Load our configurations
-        self.config = configure()
-        self.anonymousReadAccess = self.config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
+        self.anonymousReadAccess = config.getboolean('drupalSSHGitServer', 'anonymousReadAccess')
 
     def request(self, uri):
         """Build the request to run against drupal
@@ -65,10 +56,11 @@ class DrupalMeta(object):
                    }
         }"""
         try:
-            webroot = self.config.get('drush-settings', 'webroot')
-            drushPath = self.config.get('drush-settings', 'drushPath')
+            webroot = config.get('drush-settings', 'webroot')
+            drushPath = config.get('drush-settings', 'drushPath')
             command = '%s --root=%s vcs-auth-data %s' % (drushPath, webroot, self.projectname(uri))
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.readline()
+            
             self.repoAuthData = json.loads(result)
             return self.repoAuthData["users"]
         except exceptions.IOError:
@@ -84,7 +76,7 @@ class DrupalMeta(object):
         for a user or issue's specific sandbox'''
 
         # Build the path to the repository
-        path = self.config.get('drupalSSHGitServer', 'repositoryPath')
+        path = config.get('drupalSSHGitServer', 'repositoryPath')
         path = path + reponame
 
         # Check to see that the folder exists
@@ -221,7 +213,6 @@ class GitPubKeyPassthroughChecker(SSHPublicKeyDatabase):
         if (credentials.username == 'git'):
             return True
         else:
-            config = configure()
             webroot = config.get('drush-settings', 'webroot')
             drushPath = config.get('drush-settings', 'drushPath')
             """ If a user specified a non-git username, check that the user's key matches their username
@@ -246,7 +237,6 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        config = configure()
         webroot = config.get('drush-settings', 'webroot')
         drushPath = config.get('drush-settings', 'drushPath')
         command = '%s --root=%s vcs-auth-check-user-pass %s %s' % (drushPath, webroot, credentials.username, credentials.password)
@@ -270,8 +260,6 @@ class GitServer(SSHFactory):
 
 class Server(object):
     def __init__(self):
-        # Load our configurations
-        config = configure()
         self.port = config.getint('drupalSSHGitServer', 'port')
         self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
         components.registerAdapter(GitSession, GitConchUser, ISession)
