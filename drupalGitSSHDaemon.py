@@ -3,7 +3,7 @@ import os
 import shlex
 import sys
 from twisted.conch.avatar import ConchUser
-from twisted.conch.error import ConchError
+from twisted.conch.error import ConchError, UnauthorizedLogin
 from twisted.conch.ssh.channel import SSHChannel
 from twisted.conch.ssh.session import ISession, SSHSession, SSHSessionProcessProtocol
 from twisted.conch.ssh.factory import SSHFactory
@@ -13,6 +13,7 @@ from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
 from twisted.cred.portal import IRealm, Portal
 from twisted.internet import reactor, defer
 from twisted.python import components, log
+from twisted.python.failure import Failure
 from zope import interface
 
 # Workaround for early EOF in git-receive-pack
@@ -158,7 +159,6 @@ class GitSession(object):
         # Then the result of auth is passed to execGitCommand to run git-shell
         auth_service_deferred.addCallback(self.execGitCommand, argv, proto)
         auth_service_deferred.addErrback(self.errorHandler, proto)
-        return auth_service_deferred
 
     def execGitCommand(self, auth_values, argv, proto):
         reponame = argv[-1]
@@ -225,13 +225,13 @@ class GitPubKeyPassthroughChecker(object):
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            drush_process = drush.DrushProcessProtocol('drupalorg-ssh-user-key')
+            drush_process = drush.DrushProcessProtocolBool('drupalorg-ssh-user-key')
             drush_process.call(credentials.username, fingerprint)
             def username(self):
-                if self.data:
+                if self.result:
                     return credentials.username
                 else:
-                    return defer.fail(credentials.username)
+                    return Failure(UnauthorizedLogin(credentials.username))
             drush_process.deferred.addCallback(username)
             return drush_process.deferred
 
@@ -247,15 +247,15 @@ class GitPasswordPassthroughChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        drush_process = drush.DrushProcessProtocol('drupalorg-vcs-auth-check-user-pass')
+        drush_process = drush.DrushProcessProtocolBool('drupalorg-vcs-auth-check-user-pass')
         drush_process.call(credentials.username, credentials.password)
         def username(self):
-            if self.data:
+            if self.result:
                 return credentials.username
             else:
-                return defer.fail(credentials.username)
+                return Failure(UnauthorizedLogin(credentials.username))
         drush_process.deferred.addCallback(username)
-        return drush_process
+        return drush_process.deferred
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
