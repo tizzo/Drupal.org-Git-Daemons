@@ -119,18 +119,19 @@ class GitSession(object):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
             # "git":key
+            users = auth_service["users"]
             if self.user.username == "git":
-                for user in auth_service["users"].values():
+                for user in users.values():
                     if fingerprint in user["ssh_keys"].values():
                         return True, auth_service
                 return False, auth_service
             # Username in maintainers list
-            elif self.user.username in auth_service.keys():
+            elif self.user.username in users.keys():
                 # username:key
-                if fingerprint in auth_service[self.user.username]["ssh_keys"].values():
+                if fingerprint in users[self.user.username]["ssh_keys"].values():
                     return True, auth_service
                 # username:password
-                elif auth_service[self.user.username]["pass"] == password:
+                elif users[self.user.username]["pass"] == password:
                     return True, auth_service
                 else:
                     return False, auth_service
