@@ -49,6 +49,12 @@ class DrushProcessProtocol(ProcessProtocol):
         reactor.spawnProcess(self, drush_path, exec_args)
         return self.deferred
 
+class DrushProcessProtocolBool(DrushProcessProtocol):
+    bool_map = {"true":True, "false":False}
+    def outConnectionLost(self):
+        self.data = self.raw.strip()
+        self.result = self.bool_map[self.data]
+
 class DrushProcessProtocolJSON(DrushProcessProtocol):
     """Read JSON values from Drush."""
     def outConnectionLost(self):
