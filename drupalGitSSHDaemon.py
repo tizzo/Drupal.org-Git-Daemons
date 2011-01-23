@@ -121,7 +121,6 @@ class GitSession(object):
             # check if the user is a maintainer on this project
             # "git":key
             users = auth_service["users"]
-            log.msg(self.user.username)
             if self.user.username == "git":
                 for user in users.values():
                     if fingerprint in user["ssh_keys"].values():
@@ -160,7 +159,6 @@ class GitSession(object):
         # Then the result of auth is passed to execGitCommand to run git-shell
         auth_service_deferred.addCallback(self.execGitCommand, argv, proto)
         auth_service_deferred.addErrback(self.errorHandler, proto)
-        return auth_service_deferred
 
     def execGitCommand(self, auth_values, argv, proto):
         reponame = argv[-1]
@@ -230,7 +228,6 @@ class GitPubKeyPassthroughChecker(object):
             drush_process = drush.DrushProcessProtocolBool('drupalorg-ssh-user-key')
             drush_process.call(credentials.username, fingerprint)
             def username(self):
-                log.msg("user-key:" + str(self.result))
                 if self.result:
                     return credentials.username
                 else:
@@ -253,13 +250,12 @@ class GitPasswordPassthroughChecker(object):
         drush_process = drush.DrushProcessProtocolBool('drupalorg-vcs-auth-check-user-pass')
         drush_process.call(credentials.username, credentials.password)
         def username(self):
-            log.msg("user-pass:" + str(self.result))
             if self.result:
                 return credentials.username
             else:
                 return Failure(UnauthorizedLogin(credentials.username))
         drush_process.deferred.addCallback(username)
-        return drush_process
+        return drush_process.deferred
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
