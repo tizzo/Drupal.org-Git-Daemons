@@ -60,17 +60,20 @@ class DrupalMeta(object):
         drush_process.deferred.addCallback(JSONasynch)
         return drush_process.deferred
 
-    def repopath(self, reponame):
-        '''Note, this is where we could do further mapping into a subdirectory
+    def repopath(self, scheme, subpath):
+        '''Note, this is where we do further mapping into a subdirectory
         for a user or issue's specific sandbox'''
 
         # Build the path to the repository
-        path = config.get('drupalSSHGitServer', 'repositoryPath')
-        path = path + reponame
-
+        try:
+            scheme_path = config.get(scheme, 'repositoryPath')
+        except:
+            # Fall back to the default configured path scheme
+            scheme_path = config.get('drupalSSHGitServer', 'repositoryPath')
+        path = os.path.join(scheme_path, subpath + ".git")
         # Check to see that the folder exists
         if not os.path.exists(path):
-            raise ConchError('Invalid repository: {0}'.format(reponame))
+            raise ConchError('Invalid repository: {0}'.format(path))
 
         return path
 
@@ -166,13 +169,15 @@ class GitSession(object):
         auth_service_deferred.addErrback(self.errorHandler, proto)
 
     def execGitCommand(self, auth_values, argv, proto):
-        reponame = argv[-1]
+        repostring = argv[-1]
+        scheme = repostring.split('/')[1]
+        projectname = self.user.meta.projectname(repostring)
         authed, auth_service = auth_values
         sh = self.user.shell
         if authed:
             # Check permissions by mapping requested path to file system path
-            repopath = self.user.meta.repopath(reponame)
-            env = {'VERSION_CONTROL_GIT_REPOSITORY':self.user.meta.projectname(reponame),
+            repopath = self.user.meta.repopath(scheme, projectname)
+            env = {'VERSION_CONTROL_GIT_REPOSITORY':projectname,
                    'VERSION_CONTROL_GIT_USERNAME':self.user.username}
             if self.user.username in auth_service:
                 # The UID is known
@@ -181,7 +186,7 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)    
         else:
-            log.err('Permission denied when accessing {0}'.format(reponame))
+            log.err('Permission denied when accessing {0}'.format(repostring))
             reactor.spawnProcess(proto, "/bin/false")
 
     def eofReceived(self): pass
