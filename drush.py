@@ -46,7 +46,7 @@ class DrushProcessProtocol(ProcessProtocol):
 
     def call(self, *args):
         exec_args = (drush_path, "--root={0}".format(webroot), self.command) + args
-        reactor.spawnProcess(self, drush_path, exec_args)
+        reactor.spawnProcess(self, drush_path, exec_args, env = {"TERM":"dumb"})
         return self.deferred
 
 class DrushProcessProtocolBool(DrushProcessProtocol):

@@ -119,8 +119,13 @@ class GitSession(object):
                 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
-            # "git":key
             users = auth_service["users"]
+            # Disallow access to users without the global flag
+            # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
+            # d.o issue #1036686
+            if users[self.user.username]["global"]:
+                return False, auth_service
+            # "git":key
             if self.user.username == "git":
                 for user in users.values():
                     if fingerprint in user["ssh_keys"].values():
