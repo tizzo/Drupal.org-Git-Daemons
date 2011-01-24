@@ -20,11 +20,3 @@ anonymousReadAccess=true
 webroot=/var/www/drupal
 ; Set this to the path the the drush script on your local machine.
 drushPath=/usr/bin/drush
-
-; Settings specific to our repository manager daemon.
-
-[beanstalkd-git-repo-manager-daemon]
-repositoryPath=/git
-; The location of your beanstalkd
-url=127.0.0.1
-port=11300
