@@ -238,7 +238,6 @@ class GitPubKeyPassthroughChecker(object):
             drush_process = drush.DrushProcessProtocolBool('drupalorg-ssh-user-key')
             drush_process.call(credentials.username, self.meta.fingerprint)
             def username(self):
-                log.msg(self.result)
                 if self.result:
                     return credentials.username
                 else:
