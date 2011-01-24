@@ -126,7 +126,7 @@ class GitSession(object):
             if users[self.user.username]["global"]:
                 return False, auth_service
             # "git":key
-            if self.user.username == "git":
+            elif self.user.username == "git":
                 for user in users.values():
                     if fingerprint in user["ssh_keys"].values():
                         return True, auth_service
