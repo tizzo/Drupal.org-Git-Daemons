@@ -281,6 +281,7 @@ class GitServer(SSHFactory):
 class Server(object):
     def __init__(self):
         self.port = config.getint('drupalSSHGitServer', 'port')
+        self.interface = config.get('drupalSSHGitServer', 'host')
         self.key = config.get('drupalSSHGitServer', 'privateKeyLocation')
         components.registerAdapter(GitSession, GitConchUser, ISession)
 
@@ -290,5 +291,7 @@ class Server(object):
 if __name__ == '__main__':
     log.startLogging(sys.stderr)
     ssh_server = Server()
-    reactor.listenTCP(ssh_server.port, ssh_server.application())
+    reactor.listenTCP(ssh_server.port, 
+                      ssh_server.application(), 
+                      interface=ssh_server.interface)
     reactor.run()

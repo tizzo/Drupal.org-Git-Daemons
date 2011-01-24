@@ -10,7 +10,9 @@ from twisted.python.logfile import DailyLogFile
 
 def getSSHService():
     ssh_server = drupalGitSSHDaemon.Server()
-    return internet.TCPServer(ssh_server.port, ssh_server.application())
+    return internet.TCPServer(ssh_server.port,
+                              ssh_server.application(), 
+                              interface=ssh_server.interface)
 
 # this is the core part of any tac file, the creation of the root-level
 # application object

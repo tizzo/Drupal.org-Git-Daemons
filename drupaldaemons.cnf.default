@@ -6,6 +6,8 @@
 ; in this 
 ;privateKeyLocation=example-key/key
 privateKeyLocation=/etc/twisted-keys/default
+; Set the hostname this server should run on.
+host=
 ; Set the port this server should run on.
 port=2222
 ; Default git repository path
