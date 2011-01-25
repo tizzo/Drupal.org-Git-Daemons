@@ -123,19 +123,17 @@ class GitSession(object):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
             users = auth_service["users"]
-            # Disallow access to users without the global flag
+            # global values - d.o issue #1036686
             # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
-            # d.o issue #1036686
-            if users[self.user.username]["global"]:
-                return False, auth_service
             # "git":key
-            elif self.user.username == "git":
+            if self.user.username == "git":
                 for user in users.values():
-                    if fingerprint in user["ssh_keys"].values():
+                    if fingerprint in user["ssh_keys"].values() and \
+                            user["global"]:
                         return True, auth_service
                 return False, auth_service
             # Username in maintainers list
-            elif self.user.username in users.keys():
+            elif self.user.username in users.keys() and users[self.user.username]["global"]:
                 # username:key
                 if fingerprint in users[self.user.username]["ssh_keys"].values():
                     return True, auth_service
@@ -145,6 +143,7 @@ class GitSession(object):
                 else:
                     return False, auth_service
             else:
+                # Account is globally disabled or disallowed                
                 return False, auth_service
         else:
             # Read only command and anonymous access is enabled
