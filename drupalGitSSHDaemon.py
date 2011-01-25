@@ -70,7 +70,7 @@ class DrupalMeta(object):
         except:
             # Fall back to the default configured path scheme
             scheme_path = config.get('drupalSSHGitServer', 'repositoryPath')
-        path = os.path.join(scheme_path, subpath + ".git")
+        path = os.path.join(scheme_path, *subpath)
         # Check to see that the folder exists
         if not os.path.exists(path):
             raise ConchError('Invalid repository: {0}'.format(path))
@@ -180,13 +180,15 @@ class GitSession(object):
 
     def execGitCommand(self, auth_values, argv, proto):
         repostring = argv[-1]
-        scheme = repostring.split('/')[1]
+        repolist = repostring.split('/')
+        scheme = repolist[1]
+        projectpath = repolist[2:]
         projectname = self.user.meta.projectname(repostring)
         authed, auth_service = auth_values
         sh = self.user.shell
         if authed:
             # Check permissions by mapping requested path to file system path
-            repopath = self.user.meta.repopath(scheme, projectname)
+            repopath = self.user.meta.repopath(scheme, projectpath)
             env = {'VERSION_CONTROL_GIT_REPOSITORY':projectname,
                    'VERSION_CONTROL_GIT_USERNAME':self.user.username}
             if self.user.username in auth_service:
