@@ -104,6 +104,19 @@ class GitSession(object):
     def __init__(self, user):
         self.user = user
 
+    def map_user(self, username, fingerprint, users):
+        """Map the username from name or fingerprint, to users item."""
+        if username == "git":
+            # Use the fingerprint
+            for user in users.values():
+                if fingerprint in user["ssh_keys"].values():
+                    return user
+            # No fingerprints match
+            return None
+        else:
+            # Use the username
+            return users[username]
+
     def auth(self, auth_service, argv):
         # Key fingerprint
         if hasattr(self.user.meta, "fingerprint"):
