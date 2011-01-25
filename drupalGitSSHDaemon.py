@@ -118,6 +118,7 @@ class GitSession(object):
             return users[username]
 
     def auth(self, auth_service, argv):
+        """Verify we have permission to run the request command."""
         # Key fingerprint
         if hasattr(self.user.meta, "fingerprint"):
             fingerprint = self.user.meta.fingerprint
@@ -169,6 +170,7 @@ class GitSession(object):
             reactor.spawnProcess(proto, "/bin/false")
 
     def execCommand(self, proto, cmd):
+        """Execute a git-shell command."""
         argv = shlex.split(cmd)
         # This starts an auth request and returns.
         auth_service_deferred = self.user.meta.request(argv[-1])
@@ -179,6 +181,7 @@ class GitSession(object):
         auth_service_deferred.addErrback(self.errorHandler, proto)
 
     def execGitCommand(self, auth_values, argv, proto):
+        """After all authentication is done, setup an environment and execute the git-shell commands."""
         repostring = argv[-1]
         repolist = repostring.split('/')
         scheme = repolist[1]
