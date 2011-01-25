@@ -215,7 +215,7 @@ class GitRealm(object):
         user = GitConchUser(username, self.meta)
         return interfaces[0], user, user.logout
 
-class GitPubKeyPassthroughChecker(object):
+class GitPubKeyChecker(object):
     """Skip most of the auth process until the SSH session starts.
 
     Save the public key fingerprint for later use."""
@@ -226,8 +226,9 @@ class GitPubKeyPassthroughChecker(object):
         self.meta = meta
 
     def requestAvatarId(self, credentials):
-        fingerprint = Key.fromString(credentials.blob).fingerprint()
-        self.meta.fingerprint = fingerprint.replace(':','')
+        key = Key.fromString(credentials.blob)
+        fingerprint = key.fingerprint().replace(':', '')
+        self.meta.fingerprint = fingerprint
         if (credentials.username == 'git'):
             return defer.succeed(credentials.username)
         else:
@@ -235,7 +236,7 @@ class GitPubKeyPassthroughChecker(object):
 
             so that we can request a password if it does not."""
             drush_process = drush.DrushProcessProtocolBool('drupalorg-ssh-user-key')
-            drush_process.call(credentials.username, self.meta.fingerprint)
+            drush_process.call(credentials.username, fingerprint)
             def username(self):
                 if self.result:
                     return credentials.username
@@ -244,7 +245,7 @@ class GitPubKeyPassthroughChecker(object):
             drush_process.deferred.addCallback(username)
             return drush_process.deferred
 
-class GitPasswordPassthroughChecker(object):
+class GitPasswordChecker(object):
     """Skip most of the auth process until the SSH session starts.
 
     Save the password hash for later use."""
@@ -269,8 +270,8 @@ class GitPasswordPassthroughChecker(object):
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
     portal = Portal(GitRealm(authmeta))
-    portal.registerChecker(GitPubKeyPassthroughChecker(authmeta))
-    portal.registerChecker(GitPasswordPassthroughChecker(authmeta))
+    portal.registerChecker(GitPubKeyChecker(authmeta))
+    portal.registerChecker(GitPasswordChecker(authmeta))
 
     def __init__(self, privkey):
         pubkey = '.'.join((privkey, 'pub'))
