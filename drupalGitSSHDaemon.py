@@ -192,11 +192,12 @@ class GitSession(object):
         if authed:
             # Check permissions by mapping requested path to file system path
             repopath = self.user.meta.repopath(scheme, projectpath)
-            env = {'VERSION_CONTROL_GIT_REPOSITORY':projectname,
-                   'VERSION_CONTROL_GIT_USERNAME':self.user.username}
-            if self.user.username in auth_service:
-                # The UID is known
-                env['VERSION_CONTROL_GIT_UID'] = auth_service[self.user.username]['uid']
+            env = {}
+            if self.user.username in auth_service["users"]:
+                # The UID is known, populate the environment
+                user = auth_service["users"][self.user.username]
+                env['VERSION_CONTROL_GIT_UID'] = user['uid']
+                env['VERSION_CONTROL_GIT_REPO_ID'] = auth_service['repo_id']
                 
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)    
