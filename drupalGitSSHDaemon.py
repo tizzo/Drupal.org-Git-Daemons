@@ -247,7 +247,15 @@ class GitPubKeyChecker(object):
         fingerprint = key.fingerprint().replace(':', '')
         self.meta.fingerprint = fingerprint
         if (credentials.username == 'git'):
-            return defer.succeed(credentials.username)
+            drush_process = drush.DrushProcessProtocolBool('drupalorg-sshkey-check')
+            drush_process.call(fingerprint)
+            def keycheck(self):
+                if self.result:
+                    return credentials.username
+                else:
+                    return Failure(UnauthorizedLogin(credentials.username))
+            drush_process.deferred.addCallback(keycheck)
+            return drush_process.deferred
         else:
             """ If a user specified a non-git username, check that the user's key matches their username
 
