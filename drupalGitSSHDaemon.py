@@ -141,10 +141,10 @@ class GitSession(object):
             # global values - d.o issue #1036686
             # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
             # "git":key
-            if self.user.username == "git" and user and user["global"]:
+            if self.user.username == "git" and user and not user["global"]:
                 return True, auth_service
             # Username in maintainers list
-            elif self.user.username in users and user["global"]:
+            elif self.user.username in users and not user["global"]:
                 # username:key
                 if fingerprint in user["ssh_keys"].values():
                     return True, auth_service
