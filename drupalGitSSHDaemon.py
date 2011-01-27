@@ -113,9 +113,11 @@ class GitSession(object):
                     return user
             # No fingerprints match
             return None
-        else:
+        elif username in users:
             # Use the username
             return users[username]
+        else:
+            return None
 
     def auth(self, auth_service, argv):
         """Verify we have permission to run the request command."""
