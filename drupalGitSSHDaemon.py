@@ -130,36 +130,38 @@ class GitSession(object):
         else:
             password = None
 
+        # Map the user
+        users = auth_service["users"]
+        user = self.map_user(self.user.username, fingerprint, users)
+
         # Check to see if anonymous read access is enabled and if 
         # this is a read
         if (not self.user.meta.anonymousReadAccess or \
                 'git-upload-pack' not in argv[:-1]):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
-            users = auth_service["users"]
-            user = self.map_user(self.user.username, fingerprint, users)
             # global values - d.o issue #1036686
             # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
             # "git":key
             if self.user.username == "git" and user and not user["global"]:
-                return True, auth_service
+                return True, user, auth_service["repo_id"]
             # Username in maintainers list
             elif self.user.username in users and not user["global"]:
                 # username:key
                 if fingerprint in user["ssh_keys"].values():
-                    return True, auth_service
+                    return True, user, auth_service["repo_id"]
                 # username:password
                 elif user["pass"] == password:
-                    return True, auth_service
+                    return True, user, auth_service["repo_id"]
                 else:
                     # Both kinds of username auth failed
-                    return False, auth_service
+                    return False, user, auth_service["repo_id"]
             else:
                 # Account is globally disabled or disallowed                
-                return False, auth_service
+                return False, user, auth_service["repo_id"]
         else:
             # Read only command and anonymous access is enabled
-            return True, auth_service
+            return True, user, auth_service["repo_id"]
 
     def errorHandler(self, fail, proto):
         fail.trap(ConchError)
@@ -187,22 +189,23 @@ class GitSession(object):
         scheme = repolist[1]
         projectpath = repolist[2:]
         projectname = self.user.meta.projectname(repostring)
-        authed, auth_service = auth_values
+        authed, user, repo_id = auth_values
         sh = self.user.shell
+        
+        # Check permissions by mapping requested path to file system path
+        repopath = self.user.meta.repopath(scheme, projectpath)
+
         if authed:
-            # Check permissions by mapping requested path to file system path
-            repopath = self.user.meta.repopath(scheme, projectpath)
             env = {}
-            if self.user.username in auth_service["users"]:
+            if user:
                 # The UID is known, populate the environment
-                user = auth_service["users"][self.user.username]
-                env['VERSION_CONTROL_GIT_UID'] = user['uid']
-                env['VERSION_CONTROL_GIT_REPO_ID'] = auth_service['repo_id']
-                
+                env['VERSION_CONTROL_GIT_UID'] = user["uid"]
+                env['VERSION_CONTROL_GIT_REPO_ID'] = repo_id
+            
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
-            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)    
+            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            log.err('Permission denied when accessing {0}'.format(repostring))
+            log.err('Permission denied when accessing {0}'.format(repopath))
             reactor.spawnProcess(proto, "/bin/false")
 
     def eofReceived(self): pass
