@@ -10,7 +10,7 @@ from twisted.conch.ssh.factory import SSHFactory
 from twisted.conch.ssh.keys import Key
 from twisted.cred.checkers import ICredentialsChecker
 from twisted.cred.credentials import IUsernamePassword, ISSHPrivateKey
-from twisted.cred.portal import IRealm, Portal
+from twisted.cred.portal import IRealm
 from twisted.internet import reactor, defer
 from twisted.python import components, log
 from twisted.python.failure import Failure
@@ -27,6 +27,7 @@ import hashlib
 
 from config import config
 import drush
+import gituser
 
 class DrupalMeta(object):
     def __init__(self):
@@ -275,6 +276,23 @@ class GitPubKeyChecker(object):
             drush_process.deferred.addCallback(username)
             return drush_process.deferred
 
+class GitPassthroughPubKeyChecker(object):
+    """Authenticate git user requests without a known ssh key."""
+    credentialInterfaces = gituser.IGitSSHPrivateKey,
+    interface.implements(ICredentialsChecker)
+
+    def __init__(self, meta):
+        self.meta = meta
+
+    def requestAvatarId(self, credentials):
+        key = Key.fromString(credentials.blob)
+        fingerprint = key.fingerprint().replace(':', '')
+        self.meta.fingerprint = fingerprint
+        if (credentials.username == 'git'):
+            return defer.succeed(credentials.username)
+        else:
+            return Failure(UnauthorizedLogin(credentials.username))
+
 class GitPasswordChecker(object):
     """Skip most of the auth process until the SSH session starts.
 
@@ -299,7 +317,8 @@ class GitPasswordChecker(object):
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
-    portal = Portal(GitRealm(authmeta))
+    portal = gituser.GitPortal(GitRealm(authmeta))
+    portal.registerChecker(GitPassthroughPubKeyChecker(authmeta))
     portal.registerChecker(GitPubKeyChecker(authmeta))
     portal.registerChecker(GitPasswordChecker(authmeta))
 
