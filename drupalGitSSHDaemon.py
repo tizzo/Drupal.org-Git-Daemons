@@ -57,7 +57,14 @@ class DrupalMeta(object):
         drush_process.call(self.projectname(uri))
         def JSONasynch(self):
             return self.data
+        def NoDataHandler(fail):
+            fail.trap(ConchError)
+            message = fail.value.value
+            log.err(message)
+            # Return a stub auth_service object
+            return {"users":{}, "repo_id":None}
         drush_process.deferred.addCallback(JSONasynch)
+        drush_process.deferred.addErrback(NoDataHandler)
         return drush_process.deferred
 
     def repopath(self, scheme, subpath):
@@ -143,7 +150,6 @@ class GitSession(object):
             # If anonymous access for this type of command is not allowed, 
             # check if the user is a maintainer on this project
             # global values - d.o issue #1036686
-            # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
             # "git":key
             if self.user.username == "git" and user and not user["global"]:
                 return True, user, auth_service["repo_id"]
@@ -157,21 +163,32 @@ class GitSession(object):
                     return True, user, auth_service["repo_id"]
                 else:
                     # Both kinds of username auth failed
-                    return False, user, auth_service["repo_id"]
+                    error = "Permission denied when accessing '{1}' as user '{2}'".format(argv[-1], self.user.username)
+                    return Failure(ConchError(error))
             else:
-                # Account is globally disabled or disallowed                
-                return False, user, auth_service["repo_id"]
+                # Account is globally disabled or disallowed
+                # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
+                if user["global"] == 1:
+                    error = "Your account is suspended."
+                elif user["global"] == 2:
+                    error = "You are required to accept the Git Access Agreement in your user profile before using git."
+                elif user["global"] == 3:
+                    error = "Your account is disabled globally."
+                else:
+                    error = "You do not have permission to access '{1}' with the provided credentials.".format(argv[-1])
+                return Failure(ConchError(error))
         else:
             # Read only command and anonymous access is enabled
             return True, user, auth_service["repo_id"]
 
     def errorHandler(self, fail, proto):
+        """Catch any unhandled errors and send the exception string to the remote client."""
         fail.trap(ConchError)
-        log.err(fail.value.value)
+        message = fail.value.value
+        log.err(message)
         if proto.connectionMade():
             proto.loseConnection()
-        else:
-            reactor.spawnProcess(proto, "/bin/false")
+        reactor.spawnProcess(proto, "./error.py", ("./error.py", message))
 
     def execCommand(self, proto, cmd):
         """Execute a git-shell command."""
@@ -207,9 +224,7 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            error = 'Permission denied when accessing {0}'.format(repopath)
-            log.err(error)
-            reactor.spawnProcess(proto, "./error.py", ("./error.py", error))
+            return Failure(ConchError('Permission denied when accessing {0}'.format(repopath)))
 
     def eofReceived(self): pass
 
