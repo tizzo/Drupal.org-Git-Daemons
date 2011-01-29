@@ -207,8 +207,9 @@ class GitSession(object):
             command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
             reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
         else:
-            log.err('Permission denied when accessing {0}'.format(repopath))
-            reactor.spawnProcess(proto, "/bin/false")
+            error = 'Permission denied when accessing {0}'.format(repopath)
+            log.err(error)
+            reactor.spawnProcess(proto, "./error.py", ("./error.py", error))
 
     def eofReceived(self): pass
 
