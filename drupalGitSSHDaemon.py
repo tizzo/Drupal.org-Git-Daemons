@@ -93,6 +93,13 @@ class DrupalMeta(object):
                 return part[:-4]
         log.err("ERROR: Couldn't determine project name for '%s'." % (uri,))
 
+def find_error_script():
+    for directory in sys.path:
+        full_path = os.path.join(directory, "git-error")
+        if (os.path.exists(full_path) and 
+            os.access(full_path, (os.F_OK | os.X_OK))):
+            return full_path
+    raise Exception('Could not find git-error executable!')
 
 def find_git_shell():
     # Find git-shell path.
@@ -188,7 +195,8 @@ class GitSession(object):
         log.err(message)
         if proto.connectionMade():
             proto.loseConnection()
-        reactor.spawnProcess(proto, "./error.py", ("./error.py", message))
+        error_script = self.user.error_script
+        reactor.spawnProcess(proto, error_script, (error_script, message))
 
     def execCommand(self, proto, cmd):
         """Execute a git-shell command."""
@@ -233,6 +241,7 @@ class GitSession(object):
 
 class GitConchUser(ConchUser):
     shell = find_git_shell()
+    error_script = find_error_script()
 
     def __init__(self, username, meta):
         ConchUser.__init__(self)
