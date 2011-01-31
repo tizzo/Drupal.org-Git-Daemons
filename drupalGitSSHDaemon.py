@@ -90,7 +90,7 @@ class DrupalMeta(object):
         for part in parts:
             if len(part) > 4 and part[-4:] == '.git':
                 return part[:-4]
-        log.err("ERROR: Couldn't determine project name for '%s'." % (uri,))
+        log.err("ERROR: Couldn't determine project name for '{0}'.".format(uri))
 
 def find_error_script():
     for directory in sys.path:
@@ -150,11 +150,9 @@ class GitSession(object):
         repolist = repostring.split('/')
         scheme = repolist[1]
         projectpath = repolist[2:]
-        projectname = self.user.meta.projectname(repostring)
         repopath = self.user.meta.repopath(scheme, projectpath)
         if not repopath:
             return Failure(ConchError("The remote repository at '{0}' does not exist. Verify that your remote is correct.".format(repostring)))
-
 
         # Map the user
         users = auth_service["users"]
