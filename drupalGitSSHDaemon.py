@@ -188,7 +188,7 @@ class GitSession(object):
                 elif user and user["global"] == 2:
                     error = "You are required to accept the Git Access Agreement in your user profile before using git."
                 elif user and user["global"] == 3:
-                    error = "Your account is disabled globally."
+                    error = "This operation cannot be completed at this time.  It may be that we are experiencing technical difficulties or are currently undergoing maintenance."
                 else:
                     error = "You do not have permission to access '{0}' with the provided credentials.".format(argv[-1])
                 return Failure(ConchError(error))
