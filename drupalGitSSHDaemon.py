@@ -80,7 +80,7 @@ class DrupalMeta(object):
         path = os.path.join(scheme_path, *subpath)
         # Check to see that the folder exists
         if not os.path.exists(path):
-            raise ConchError('Invalid repository: {0}'.format(path))
+            raise ConchError("The remote repository at '{0}' does not exist. Verify that your remote is correct.".format(path))
 
         return path
 
@@ -146,6 +146,14 @@ class GitSession(object):
         else:
             password = None
 
+        # Check permissions by mapping requested path to file system path
+        repostring = argv[-1]
+        repolist = repostring.split('/')
+        scheme = repolist[1]
+        projectpath = repolist[2:]
+        projectname = self.user.meta.projectname(repostring)
+        repopath = self.user.meta.repopath(scheme, projectpath)
+
         # Map the user
         users = auth_service["users"]
         user = self.map_user(self.user.username, fingerprint, users)
@@ -159,15 +167,15 @@ class GitSession(object):
             # global values - d.o issue #1036686
             # "git":key
             if self.user.username == "git" and user and not user["global"]:
-                return True, user, auth_service["repo_id"]
+                return repopath, user, auth_service["repo_id"]
             # Username in maintainers list
             elif self.user.username in users and not user["global"]:
                 # username:key
                 if fingerprint in user["ssh_keys"].values():
-                    return True, user, auth_service["repo_id"]
+                    return repopath, user, auth_service["repo_id"]
                 # username:password
                 elif user["pass"] == password:
-                    return True, user, auth_service["repo_id"]
+                    return repopath, user, auth_service["repo_id"]
                 else:
                     # Both kinds of username auth failed
                     error = "Permission denied when accessing '{1}' as user '{2}'".format(argv[-1], self.user.username)
@@ -186,7 +194,7 @@ class GitSession(object):
                 return Failure(ConchError(error))
         else:
             # Read only command and anonymous access is enabled
-            return True, user, auth_service["repo_id"]
+            return repopath, user, auth_service["repo_id"]
 
     def errorHandler(self, fail, proto):
         """Catch any unhandled errors and send the exception string to the remote client."""
@@ -211,28 +219,17 @@ class GitSession(object):
 
     def execGitCommand(self, auth_values, argv, proto):
         """After all authentication is done, setup an environment and execute the git-shell commands."""
-        repostring = argv[-1]
-        repolist = repostring.split('/')
-        scheme = repolist[1]
-        projectpath = repolist[2:]
-        projectname = self.user.meta.projectname(repostring)
-        authed, user, repo_id = auth_values
+        repopath, user, repo_id = auth_values
         sh = self.user.shell
         
-        # Check permissions by mapping requested path to file system path
-        repopath = self.user.meta.repopath(scheme, projectpath)
-
-        if authed:
-            env = {}
-            if user:
-                # The UID is known, populate the environment
-                env['VERSION_CONTROL_GIT_UID'] = user["uid"]
-                env['VERSION_CONTROL_GIT_REPO_ID'] = repo_id
+        env = {}
+        if user:
+            # The UID is known, populate the environment
+            env['VERSION_CONTROL_GIT_UID'] = user["uid"]
+            env['VERSION_CONTROL_GIT_REPO_ID'] = repo_id
             
-            command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
-            reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
-        else:
-            return Failure(ConchError('Permission denied when accessing {0}'.format(repopath)))
+        command = ' '.join(argv[:-1] + ["'{0}'".format(repopath)])
+        reactor.spawnProcess(proto, sh, (sh, '-c', command), env=env)
 
     def eofReceived(self): pass
 
