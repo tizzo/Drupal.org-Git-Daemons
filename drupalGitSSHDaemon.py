@@ -285,7 +285,6 @@ class GitPubKeyChecker(object):
                 return Failure(UnauthorizedLogin("key could not verified"))
 
     def requestAvatarId(self, credentials):
-        log.msg(credentials.algName)
         key = Key.fromString(credentials.blob)
         fingerprint = key.fingerprint().replace(':', '')
         self.meta.fingerprint = fingerprint
