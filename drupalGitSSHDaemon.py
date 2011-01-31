@@ -175,14 +175,14 @@ class GitSession(object):
             else:
                 # Account is globally disabled or disallowed
                 # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
-                if user["global"] == 1:
+                if user and user["global"] == 1:
                     error = "Your account is suspended."
-                elif user["global"] == 2:
+                elif user and user["global"] == 2:
                     error = "You are required to accept the Git Access Agreement in your user profile before using git."
-                elif user["global"] == 3:
+                elif user and user["global"] == 3:
                     error = "Your account is disabled globally."
                 else:
-                    error = "You do not have permission to access '{1}' with the provided credentials.".format(argv[-1])
+                    error = "You do not have permission to access '{0}' with the provided credentials.".format(argv[-1])
                 return Failure(ConchError(error))
         else:
             # Read only command and anonymous access is enabled
