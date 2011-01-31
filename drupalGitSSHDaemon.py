@@ -80,8 +80,7 @@ class DrupalMeta(object):
         path = os.path.join(scheme_path, *subpath)
         # Check to see that the folder exists
         if not os.path.exists(path):
-            raise ConchError("The remote repository at '{0}' does not exist. Verify that your remote is correct.".format(path))
-
+            return None
         return path
 
     def projectname(self, uri):
@@ -153,6 +152,9 @@ class GitSession(object):
         projectpath = repolist[2:]
         projectname = self.user.meta.projectname(repostring)
         repopath = self.user.meta.repopath(scheme, projectpath)
+        if not repopath:
+            return Failure(ConchError("The remote repository at '{0}' does not exist. Verify that your remote is correct.".format(repostring)))
+
 
         # Map the user
         users = auth_service["users"]
