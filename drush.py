@@ -2,7 +2,8 @@ from twisted.conch.error import ConchError
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
-import json
+from zope.interface import implements
+from service import IServiceProtocol
 from config import config
 
 # Load drush settings from drupaldaemons.cnf
@@ -13,6 +14,7 @@ class DrushError(ConchError):
     pass
 
 class DrushProcessProtocol(ProcessProtocol):
+    implements(IServiceProtocol)
     """Read string values from Drush"""
     def __init__(self, command):
         self.raw = ""
@@ -27,7 +29,7 @@ class DrushProcessProtocol(ProcessProtocol):
         self.raw_error += data
 
     def outConnectionLost(self):
-        self.data = self.raw.strip()
+        self.result = self.raw.strip()
 
     def processEnded(self, status):
         if self.raw_error:
@@ -35,7 +37,7 @@ class DrushProcessProtocol(ProcessProtocol):
             for each in self.raw_error.split("\n"):
                 log.err("  " + each)
         rc = status.value.exitCode
-        if self.data and rc == 0:
+        if self.result and rc == 0:
             self.deferred.callback(self)
         else:
             if rc == 0:
@@ -44,21 +46,7 @@ class DrushProcessProtocol(ProcessProtocol):
                 err = DrushError("Drush failed ({0})".format(rc))
             self.deferred.errback(err)
 
-    def call(self, *args):
+    def request(self, *args):
         exec_args = (drush_path, "--root={0}".format(webroot), self.command) + args
         reactor.spawnProcess(self, drush_path, exec_args, env = {"TERM":"dumb"})
         return self.deferred
-
-class DrushProcessProtocolBool(DrushProcessProtocol):
-    bool_map = {"true":True, "false":False}
-    def outConnectionLost(self):
-        self.data = self.raw.strip()
-        self.result = self.bool_map[self.data]
-
-class DrushProcessProtocolJSON(DrushProcessProtocol):
-    """Read JSON values from Drush."""
-    def outConnectionLost(self):
-        try:
-            self.data = json.loads(self.raw)
-        except ValueError:
-            log.err("Drush {0} returned bad JSON.".format(self.command))

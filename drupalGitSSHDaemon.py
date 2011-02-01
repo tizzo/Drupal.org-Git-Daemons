@@ -26,7 +26,8 @@ import base64
 import hashlib
 
 from config import config
-import drush
+from service import Service
+from drush import DrushProcessProtocol
 
 class DrupalMeta(object):
     def __init__(self):
@@ -53,19 +54,16 @@ class DrupalMeta(object):
                     ssh_keys: { key_name:fingerprint }
                    }
         }"""
-        drush_process = drush.DrushProcessProtocolJSON('vcs-auth-data')
-        drush_process.call(self.projectname(uri))
-        def JSONasynch(self):
-            return self.data
+        service = Service(DrushProcessProtocol('vcs-auth-data'))
+        service.request_json(self.projectname(uri))
         def NoDataHandler(fail):
             fail.trap(ConchError)
             message = fail.value.value
             log.err(message)
             # Return a stub auth_service object
             return {"users":{}, "repo_id":None}
-        drush_process.deferred.addCallback(JSONasynch)
-        drush_process.deferred.addErrback(NoDataHandler)
-        return drush_process.deferred
+        service.addErrback(NoDataHandler)
+        return service.deferred
 
     def repopath(self, scheme, subpath):
         '''Note, this is where we do further mapping into a subdirectory
@@ -300,16 +298,16 @@ class GitPubKeyChecker(object):
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            drush_process = drush.DrushProcessProtocolBool('drupalorg-ssh-user-key')
-            drush_process.call(credentials.username, fingerprint)
-            def username(self):
-                if self.result:
+            service = Service(DrushProcessProtocol('drupalorg-ssh-user-key'))
+            service.request_bool(credentials.username, fingerprint)
+            def auth_callback(result):
+                if result:
                     return credentials.username
                 else:
                     return Failure(UnauthorizedLogin(credentials.username))
-            drush_process.deferred.addCallback(username)
-            drush_process.deferred.addCallback(self.verify, credentials, key)
-            return drush_process.deferred
+            service.addCallback(auth_callback)
+            service.addCallback(self.verify, credentials, key)
+            return service.deferred
 
 class GitPasswordChecker(object):
     """Skip most of the auth process until the SSH session starts.
@@ -323,15 +321,15 @@ class GitPasswordChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        drush_process = drush.DrushProcessProtocolBool('drupalorg-vcs-auth-check-user-pass')
-        drush_process.call(credentials.username, credentials.password)
-        def username(self):
-            if self.result:
+        service = Service(DrushProcessProtocol('drupalorg-vcs-auth-check-user-pass'))
+        service.request_bool(credentials.username, credentials.password)
+        def auth_callback(result):
+            if result:
                 return credentials.username
             else:
                 return Failure(UnauthorizedLogin(credentials.username))
-        drush_process.deferred.addCallback(username)
-        return drush_process.deferred
+        service.addCallback(auth_callback)
+        return service.deferred
 
 class GitServer(SSHFactory):
     authmeta = DrupalMeta()
