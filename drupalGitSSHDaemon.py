@@ -27,7 +27,7 @@ import hashlib
 
 from config import config
 from service import Service
-from drush import DrushProcessProtocol
+from service.protocols import DrushProcessProtocol
 
 class DrupalMeta(object):
     def __init__(self):

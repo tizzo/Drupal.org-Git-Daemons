@@ -7,7 +7,7 @@ from service import IServiceProtocol
 from config import config
 
 # Load drush settings from drupaldaemons.cnf
-webroot = config.get('drush-settings', 'webroot')
+drush_webroot = config.get('drush-settings', 'webroot')
 drush_path = config.get('drush-settings', 'drushPath')
 
 class DrushError(ConchError):
@@ -47,6 +47,6 @@ class DrushProcessProtocol(ProcessProtocol):
             self.deferred.errback(err)
 
     def request(self, *args):
-        exec_args = (drush_path, "--root={0}".format(webroot), self.command) + args
+        exec_args = (drush_path, "--root={0}".format(drush_webroot), self.command) + args
         reactor.spawnProcess(self, drush_path, exec_args, env = {"TERM":"dumb"})
         return self.deferred
