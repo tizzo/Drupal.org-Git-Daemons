@@ -14,6 +14,8 @@ port=2222
 repositoryPath=/git/project
 ; Allow anonymous users to read all repositories (clone and pull)
 anonymousReadAccess=true
+; Auth service protocol (drush or http)
+authServiceProtocol=drush
 
 ; Per scheme paths
 
@@ -27,3 +29,7 @@ repositoryPath=/git/project
 webroot=/var/www/drupal
 ; Set this to the path the the drush script on your local machine.
 drushPath=/usr/bin/drush
+
+[http-settings]
+; Set this if using http service auth
+serviceUrl=http://git.example.tld/auth_service_path

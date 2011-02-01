@@ -27,7 +27,7 @@ import hashlib
 
 from config import config
 from service import Service
-from service.protocols import DrushProcessProtocol
+from service.protocols import AuthProtocol
 
 class DrupalMeta(object):
     def __init__(self):
@@ -54,7 +54,7 @@ class DrupalMeta(object):
                     ssh_keys: { key_name:fingerprint }
                    }
         }"""
-        service = Service(DrushProcessProtocol('vcs-auth-data'))
+        service = Service(AuthProtocol('vcs-auth-data'))
         service.request_json(self.projectname(uri))
         def NoDataHandler(fail):
             fail.trap(ConchError)
@@ -298,7 +298,7 @@ class GitPubKeyChecker(object):
             """ If a user specified a non-git username, check that the user's key matches their username
 
             so that we can request a password if it does not."""
-            service = Service(DrushProcessProtocol('drupalorg-ssh-user-key'))
+            service = Service(AuthProtocol('drupalorg-ssh-user-key'))
             service.request_bool(credentials.username, fingerprint)
             def auth_callback(result):
                 if result:
@@ -321,7 +321,7 @@ class GitPasswordChecker(object):
 
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
-        service = Service(DrushProcessProtocol('drupalorg-vcs-auth-check-user-pass'))
+        service = Service(AuthProtocol('drupalorg-vcs-auth-check-user-pass'))
         service.request_bool(credentials.username, credentials.password)
         def auth_callback(result):
             if result:

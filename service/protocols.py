@@ -1,14 +1,23 @@
+from config import config
+from service import IServiceProtocol
 from twisted.conch.error import ConchError
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
+from twisted.web.client import getPage
+import urlparse
 from zope.interface import implements
-from service import IServiceProtocol
-from config import config
 
-# Load drush settings from drupaldaemons.cnf
-drush_webroot = config.get('drush-settings', 'webroot')
-drush_path = config.get('drush-settings', 'drushPath')
+auth_protocol = config.get('drupalSSHGitServer', 'authServiceProtocol')
+if auth_protocol == "drush":
+    # Load drush settings from drupaldaemons.cnf
+    drush_webroot = config.get('drush-settings', 'webroot')
+    drush_path = config.get('drush-settings', 'drushPath')
+elif auth_protocol == "http":
+    # Load http settings
+    http_service_url = config.get('http-settings', 'serviceUrl')
+else:
+    raise Exception("No valid authServiceProtocol specified.")
 
 class DrushError(ConchError):
     pass
@@ -50,3 +59,21 @@ class DrushProcessProtocol(ProcessProtocol):
         exec_args = (drush_path, "--root={0}".format(drush_webroot), self.command) + args
         reactor.spawnProcess(self, drush_path, exec_args, env = {"TERM":"dumb"})
         return self.deferred
+
+class HTTPServiceProtocol(object):
+    implements(IServiceProtocol)
+    def __init__(self, url):
+        self.raw = ""
+        self.raw_error = ""
+        self.deferred = None
+        self.command = url
+
+    def request(self, *args):
+        cookies = {"arguments":args}
+        constructed_url = urlparse.urljoin(http_service_url, self.command)
+        self.deferred = getPage(constructed_url, cookies=cookies)
+
+if auth_protocol == "drush":
+    AuthProtocol = DrushProcessProtocol
+elif auth_protocol == "http":
+    AuthProtocol = HTTPServiceProtocol
