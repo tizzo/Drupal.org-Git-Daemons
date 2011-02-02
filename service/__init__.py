@@ -16,7 +16,6 @@ class Service(object):
     bool_map = {"true":True, "false":False} # PHP booleans - add more if needed
     def __init__(self, protocol):
         self.protocol = protocol
-        self.deferred = protocol.deferred
 
     def convert_bool(self, protocol):
         self.result = self.bool_map[protocol.raw.strip()]
@@ -24,7 +23,7 @@ class Service(object):
 
     def request_bool(self, *args):
         self.protocol.request(*args)
-        self.deferred.addCallback(self.convert_bool)
+        self.protocol.deferred.addCallback(self.convert_bool)
 
     def convert_json(self, protocol):
         try:
@@ -35,10 +34,14 @@ class Service(object):
 
     def request_json(self, *args):
         self.protocol.request(*args)
-        self.deferred.addCallback(self.convert_json)
+        self.protocol.deferred.addCallback(self.convert_json)
 
     def addCallback(self, *args):
-        self.deferred.addCallback(*args)
+        self.protocol.deferred.addCallback(*args)
 
     def addErrback(self, *args):
-        self.deferred.addErrback(*args)
+        self.protocol.deferred.addErrback(*args)
+
+    @property
+    def deferred(self):
+        return self.protocol.deferred

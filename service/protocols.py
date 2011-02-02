@@ -5,7 +5,8 @@ from twisted.internet import reactor, defer
 from twisted.internet.protocol import ProcessProtocol
 from twisted.python import log
 from twisted.web.client import getPage
-import urlparse
+from twisted.web.error import Error
+import urllib, urlparse
 from zope.interface import implements
 
 auth_protocol = config.get('drupalSSHGitServer', 'authServiceProtocol')
@@ -20,6 +21,9 @@ else:
     raise Exception("No valid authServiceProtocol specified.")
 
 class DrushError(ConchError):
+    pass
+
+class HTTPError(ConchError):
     pass
 
 class DrushProcessProtocol(ProcessProtocol):
@@ -56,8 +60,12 @@ class DrushProcessProtocol(ProcessProtocol):
             self.deferred.errback(err)
 
     def request(self, *args):
-        exec_args = (drush_path, "--root={0}".format(drush_webroot), self.command) + args
-        reactor.spawnProcess(self, drush_path, exec_args, env = {"TERM":"dumb"})
+        exec_args = [drush_path, 
+                     "--root={0}".format(drush_webroot), 
+                     self.command]
+        for a in args:
+            exec_args += a.values()
+        reactor.spawnProcess(self, drush_path, exec_args, env={"TERM":"dumb"})
         return self.deferred
 
 class HTTPServiceProtocol(object):
@@ -66,10 +74,19 @@ class HTTPServiceProtocol(object):
         self.deferred = None
         self.command = url
 
+    def http_request_error(self, fail):
+        fail.trap(Error)
+        raise HTTPError("Could not open URL for {0}.".format(self.command))
+
     def request(self, *args):
-        cookies = {"arguments":args}
-        constructed_url = urlparse.urljoin(http_service_url, self.command)
-        self.deferred = getPage(constructed_url, cookies=cookies)
+        arguments = dict()
+        for a in args:
+            arguments.update(a)
+        url_arguments = self.command + "?" + urllib.urlencode(arguments)
+        constructed_url = urlparse.urljoin(http_service_url, url_arguments)
+        self.deferred = getPage(constructed_url)
+        self.deferred.addErrback(self.http_request_error)
+
 
 if auth_protocol == "drush":
     AuthProtocol = DrushProcessProtocol

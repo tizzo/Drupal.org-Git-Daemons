@@ -32,4 +32,4 @@ drushPath=/usr/bin/drush
 
 [http-settings]
 ; Set this if using http service auth
-serviceUrl=http://git.example.tld/auth_service_path
+serviceUrl=http://git.example.tld/auth_service_path/

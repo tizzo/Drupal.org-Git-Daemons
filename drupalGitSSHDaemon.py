@@ -55,7 +55,7 @@ class DrupalMeta(object):
                    }
         }"""
         service = Service(AuthProtocol('vcs-auth-data'))
-        service.request_json(self.projectname(uri))
+        service.request_json({"project_uri":self.projectname(uri)})
         def NoDataHandler(fail):
             fail.trap(ConchError)
             message = fail.value.value
@@ -299,7 +299,8 @@ class GitPubKeyChecker(object):
 
             so that we can request a password if it does not."""
             service = Service(AuthProtocol('drupalorg-ssh-user-key'))
-            service.request_bool(credentials.username, fingerprint)
+            service.request_bool({"username":credentials.username},
+                                 {"fingerprint":fingerprint})
             def auth_callback(result):
                 if result:
                     return credentials.username
@@ -322,7 +323,8 @@ class GitPasswordChecker(object):
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
         service = Service(AuthProtocol('drupalorg-vcs-auth-check-user-pass'))
-        service.request_bool(credentials.username, credentials.password)
+        service.request_bool({"username":credentials.username},
+                             {"password":credentials.password})
         def auth_callback(result):
             if result:
                 return credentials.username
