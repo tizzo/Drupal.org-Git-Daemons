@@ -63,8 +63,6 @@ class DrushProcessProtocol(ProcessProtocol):
 class HTTPServiceProtocol(object):
     implements(IServiceProtocol)
     def __init__(self, url):
-        self.raw = ""
-        self.raw_error = ""
         self.deferred = None
         self.command = url
 
