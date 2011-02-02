@@ -324,7 +324,7 @@ class GitPasswordChecker(object):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
         service = Service(AuthProtocol('drupalorg-vcs-auth-check-user-pass'))
         service.request_bool({"username":credentials.username},
-                             {"password":credentials.password})
+                             {"password":self.meta.password})
         def auth_callback(result):
             if result:
                 return credentials.username
