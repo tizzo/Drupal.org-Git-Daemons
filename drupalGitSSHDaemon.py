@@ -324,7 +324,7 @@ class GitPasswordChecker(object):
     def requestAvatarId(self, credentials):
         self.meta.password = hashlib.md5(credentials.password).hexdigest()
         drush_process = drush.DrushProcessProtocolBool('drupalorg-vcs-auth-check-user-pass')
-        drush_process.call(credentials.username, credentials.password)
+        drush_process.call(credentials.username, self.meta.password)
         def username(self):
             if self.result:
                 return credentials.username
