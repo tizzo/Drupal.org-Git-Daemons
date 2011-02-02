@@ -17,6 +17,7 @@ if auth_protocol == "drush":
 elif auth_protocol == "http":
     # Load http settings
     http_service_url = config.get('http-settings', 'serviceUrl')
+    http_host_header = {"Host":config.get('http-settings', 'hostHeader')}
 else:
     raise Exception("No valid authServiceProtocol specified.")
 
@@ -84,7 +85,7 @@ class HTTPServiceProtocol(object):
             arguments.update(a)
         url_arguments = self.command + "?" + urllib.urlencode(arguments)
         constructed_url = urlparse.urljoin(http_service_url, url_arguments)
-        self.deferred = getPage(constructed_url)
+        self.deferred = getPage(constructed_url, headers=http_host_header)
         self.deferred.addErrback(self.http_request_error)
 
 
