@@ -35,3 +35,5 @@ drushPath=/usr/bin/drush
 serviceUrl=http://git.example.tld/auth_service_path/
 ; HTTP Host: header setting
 hostHeader=git.example.tld
+; HTTP auth
+httpAuth=username:password

@@ -1,3 +1,4 @@
+from base64 import b64encode
 from config import config
 from service import IServiceProtocol
 from twisted.conch.error import ConchError
@@ -17,7 +18,9 @@ if auth_protocol == "drush":
 elif auth_protocol == "http":
     # Load http settings
     http_service_url = config.get('http-settings', 'serviceUrl')
-    http_host_header = {"Host":config.get('http-settings', 'hostHeader')}
+    http_host_header = config.get('http-settings', 'hostHeader')
+    http_auth = b64encode(config.get('http-settings', 'httpAuth'))
+    http_headers = {"Host":http_host_header, "Authorization":"Basic " + http_auth}
 else:
     raise Exception("No valid authServiceProtocol specified.")
 
@@ -85,7 +88,7 @@ class HTTPServiceProtocol(object):
             arguments.update(a)
         url_arguments = self.command + "?" + urllib.urlencode(arguments)
         constructed_url = urlparse.urljoin(http_service_url, url_arguments)
-        self.deferred = getPage(constructed_url, headers=http_host_header)
+        self.deferred = getPage(constructed_url, headers=http_headers)
         self.deferred.addErrback(self.http_request_error)
 
 
