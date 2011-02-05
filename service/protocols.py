@@ -55,7 +55,7 @@ class DrushProcessProtocol(ProcessProtocol):
                 log.err("  " + each)
         rc = status.value.exitCode
         if self.result and rc == 0:
-            self.deferred.callback(self)
+            self.deferred.callback(self.result)
         else:
             if rc == 0:
                 err = DrushError("Failed to read from drush.")
