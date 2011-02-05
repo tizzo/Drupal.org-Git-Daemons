@@ -17,18 +17,18 @@ class Service(object):
     def __init__(self, protocol):
         self.protocol = protocol
 
-    def convert_bool(self, protocol):
-        self.result = self.bool_map[protocol.raw.strip()]
-        return self.result
+    def convert_bool(self, raw):
+        result = self.bool_map[raw.strip()]
+        return result
 
     def request_bool(self, *args):
         self.protocol.request(*args)
         self.protocol.deferred.addCallback(self.convert_bool)
 
-    def convert_json(self, protocol):
+    def convert_json(self, raw):
         try:
-            self.result = json.loads(protocol.raw)
-            return self.result
+            result = json.loads(raw)
+            return result
         except ValueError:
             log.err("Protocol {0}:{1} returned bad JSON.".format(self.protocol.__class__, self.protocol.command))
 
