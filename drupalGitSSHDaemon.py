@@ -180,15 +180,15 @@ class GitSession(object):
                     return Failure(ConchError(error))
             else:
                 # Account is globally disabled or disallowed
-                # 0 = ok, 1 = suspended, 2 = ToS unchecked, 3 = other reason
-                if user and user["global"] == 1:
+                # 0 = ok, 0x02 = suspended, 0x04 = ToS unchecked, 0x01 = no Git user role, but unknown reason (probably a bug!)
+                if user and user["global"] & 0x02:
                     error = "Your account is suspended."
-                elif user and user["global"] == 2:
+                elif user and user["global"] & 0x04:
                     error = "You are required to accept the Git Access Agreement in your user profile before using git."
-                elif user and user["global"] == 3:
-                    error = "This operation cannot be completed at this time.  It may be that we are experiencing technical difficulties or are currently undergoing maintenance."
-                else:
+                elif user and user["global"] & 0x01:
                     error = "You do not have permission to access '{0}' with the provided credentials.".format(argv[-1])
+                else:
+                    error = "This operation cannot be completed at this time.  It may be that we are experiencing technical difficulties or are currently undergoing maintenance."
                 return Failure(ConchError(error))
         else:
             # Read only command and anonymous access is enabled
